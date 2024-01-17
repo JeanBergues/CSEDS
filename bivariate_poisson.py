@@ -1,13 +1,13 @@
 import numpy as np
 import math
 
-def pdf_bp(x, y, lambda):
+def pdf_bp(x, y, Lambda):
 # Function to calculate the pdf of a bivariate poisson dist
-    product_component = np.exp(-(sum(lambda))) * ((lambda[0]**x)/(math.factorial(x))) * ((lambda[1]**y)/(math.factorial(y)))
+    product_component = np.exp(-(np.sum(Lambda))) * ((Lambda[0]**x)/(math.factorial(x))) * ((Lambda[1]**y)/(math.factorial(y)))
 
     sum_component = 0
     for k in range(min(x, y)):
-        sum_component += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (((lambda[3])/(lambda[1]*lambda[2]))**k)
+        sum_component += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (((Lambda[3])/(Lambda[1]*Lambda[2]))**k)
 
     return product_component * sum_component
 
