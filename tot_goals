@@ -1,0 +1,30 @@
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv('N1 (1).csv')
+
+clubs = df["HomeTeam"].unique()
+
+club_goals = {club: [] for club in clubs}
+
+for club in clubs:
+    for i in range(len(df)):
+        if df["HomeTeam"][i] == club:
+            club_goals[club].append(df["FTHG"][i])
+        elif df["AwayTeam"][i] == club:
+            club_goals[club].append(df["FTAG"][i])
+
+cumulative_goals = {club: np.cumsum(goals).tolist() for club, goals in club_goals.items()}
+
+# Create a new DataFrame from the cumulative goals data
+cumulative_goals_df = pd.DataFrame(cumulative_goals)
+
+# Transpose the DataFrame to have clubs as rows and columns as dates
+cumulative_goals_df = cumulative_goals_df.T
+
+# Reset index to have 'Club' as a regular column
+cumulative_goals_df.reset_index(inplace=True)
+cumulative_goals_df.rename(columns={'index': 'Club'}, inplace=True)
+
+# Print or display the new DataFrame
+print(cumulative_goals_df)
