@@ -1,7 +1,7 @@
 import pandas as pd
-import numpy as np
+import matplotlib.pyplot as plt
 
-df = pd.read_csv('season0203.csv')
+df = pd.read_csv('N1 (1).csv')
 
 clubs = df["HomeTeam"].unique()
 
@@ -14,17 +14,9 @@ for club in clubs:
         elif df["AwayTeam"][i] == club:
             club_goals[club].append(df["FTAG"][i])
 
-cumulative_goals = {club: np.cumsum(goals).tolist() for club, goals in club_goals.items()}
+match_goals_df = pd.DataFrame(club_goals)
+match_goals_df = match_goals_df
+match_goals_df.reset_index(inplace=True)
+match_goals_df.rename(columns={'index': 'Club'}, inplace=True)
 
-# Create a new DataFrame from the cumulative goals data
-cumulative_goals_df = pd.DataFrame(cumulative_goals)
-
-# Transpose the DataFrame to have clubs as rows and columns as dates
-cumulative_goals_df = cumulative_goals_df.T
-
-# Reset index to have 'Club' as a regular column
-cumulative_goals_df.reset_index(inplace=True)
-cumulative_goals_df.rename(columns={'index': 'Club'}, inplace=True)
-
-# Print or display the new DataFrame
-print(cumulative_goals_df)
+print(match_goals_df)
