@@ -27,9 +27,29 @@ def pdf_bp(x, y, alpha_it, alpha_jt, beta_it, beta_jt, lambda3, delta):
 
     return product_component * sum_component
 
-def calc_s():
+def S(x, y, lambda1, lambda2, q, lambda3, delta):
+    summation = 0
+    for k in range(min(x,y)):
+        summation += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (k**q) * (((lambda3)/(lambda1*lambda2))**k)
+    return summation
+
+
+def calc_s(x, y, alpha_home, alpha_away, beta_home, beta_away, lambda3, delta):
+    # Calc lambda
+    lambda1 = np.exp(delta + alpha_home - beta_away)
+    lambda2 = np.exp(alpha_away - beta_home)
+
+    # Calc U
+    U = S(x, y, lambda1, lambda2, 1, lambda3, delta) / S(x, y, lambda1, lambda2, 0, lambda3, delta)
     
-    return
+    # Calc first derivative
+    first_der = []
+    first_der.append(x - lambda1 - U)
+    first_der.append(x - lambda1 - U)
+    first_der.append(lambda2 - y + U)
+    first_der.append(lambda1 - x + U)
+
+    return first_der
 
 def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
 # Function for calculating the log likelihood of bivariate poisson dist
@@ -47,9 +67,6 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
     f = []
     A = create_A_B_matrix(a1,a2, 2)
     B = create_A_B_matrix(b1,b1, 2)
-
-    # TO DO
-    # Define s_t
 
     # Calculating likelihood
     for t in range(T):
@@ -87,14 +104,27 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
                 home_index = all_teams.index(home)
                 away_index = all_teams.index(away)
 
+                # Get corresponding data
+                x = data[t][home]
+                y = data[t][away]
+
+                # Calc previous lambda1 and lambda2
+                prev_alpha_home = f[t-1][home_index]
+                prev_alpha_away = f[t-1][away_index]
+                prev_beta_home = f[t-1][home_index + len(f[0])]
+                prev_beta_away = f[t-1][away_index + len(f[0])]
+
+                # Calc s_t
+                s = calc_s(x, y, prev_alpha_home, prev_alpha_away, prev_beta_home, prev_beta_away, a1, a2, b1, b2, lambda3, delta)
+
                 # Update f_t
-                f[t][home_index] = w[home_index] + B * f[t-1][home_index] + A * s # Attack strength home
-                f[t][away_index] = w[away_index] + B * f[t-1][away_index] + A * s # Attack strength away
-                f[t][home_index + len(f[0])] = w[home_index + len(f[0])] + B * f[t-1][home_index + len(f[0])] + A * s # Defense strength home
-                f[t][away_index + len(f[0])] = w[away_index + len(f[0])] + B * f[t-1][away_index + len(f[0])] + A * s # Defense strength away
+                f[t][home_index] = w[home_index] + b1 * f[t-1][home_index] + a1 * s[0] # Attack strength home
+                f[t][away_index] = w[away_index] + b1 * f[t-1][away_index] + a1 * s[1] # Attack strength away
+                f[t][home_index + len(f[0])] = w[home_index + len(f[0])] + b2* f[t-1][home_index + len(f[0])] + a2 * s[2] # Defense strength home
+                f[t][away_index + len(f[0])] = w[away_index + len(f[0])] + b2 * f[t-1][away_index + len(f[0])] + a2 * s[3] # Defense strength away
 
                 # Updating sum
-                sum_1 += np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
+                sum_1 += np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
 
             
             # Filling in f_t when team does not play
