@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import pandas as pd
 
 def create_A_B_matrix(a, b, N):
     # Creates first block
@@ -26,11 +27,16 @@ def pdf_bp(x, y, alpha_it, alpha_jt, beta_jt, beta_it, lambda3, delta):
 
     return product_component * sum_component
 
-def ll_biv_poisson(X, Y, a1, a2, b1, b2, lambda3, delta):
+def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
 # Function for calculating the log likelihood of bivariate poisson dist
+    # # Defining variables
+    # X = data["FTHG"]
+    # Y = data["FTAG"]
+    # all_teams = data["HomeTeam"].to_list() + data["AwayTeam"].to_list()
+
     # Length of data
-    N = len(X)
-    T = len(X[0])
+    N = len(X[0])
+    T = len(X)
 
     # Setting log likelihood to 0 first
     ll = 0
@@ -46,10 +52,11 @@ def ll_biv_poisson(X, Y, a1, a2, b1, b2, lambda3, delta):
             f[t] = calc_ini_f
             w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B)))
         else:
-            f[t] = w + B * f[t] + A * s[t]
+            f[t] = w + B * f[t-1] + A * s[t]
 
+        schedule_round = schedule[schedule['round'] == t]
         sum_1 = 0
-        for i in range(N/2):
+        for i in range(len(schedule_round)):
             sum_1 += np.log(pdf_bp(X[t, i], Y[t, i], f[t][i], alpha_jt, beta_jt, beta_it, delta, lambda3)) # (X, Y, alpha_it, alpha_jt, beta_jt, beta_it, delta, lambda3)
         ll += sum_1
 
@@ -63,5 +70,8 @@ def train_model_bp(X, Y):
     f.append(calc_ini_f())
 
 
-
+data = pd.read_csv("/Users/romnickevangelista/Documents/CSEDS/data_nl/season0001.csv")
+print((data["HomeTeam"].to_list() + data["AwayTeam"].to_list())[307])
+print(data.iloc[1]["AwayTeam"])
+print(len(data["HomeTeam"]))
 
