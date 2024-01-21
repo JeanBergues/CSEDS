@@ -34,10 +34,6 @@ def main() -> None:
     # Set-up variables concerning data
     country = 'nl'
     selected_columns = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
-
-    # Set-up variables concerning neural network
-    no_hidden_layers = 2
-    hidden_layer_size = 20
     
     # Read in the data
     data = read_and_filter_data(country, selected_columns)
