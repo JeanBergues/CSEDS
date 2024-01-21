@@ -11,13 +11,19 @@ import glob
 
 import pandas as pd
 import numpy as np
-import datetime
+from datetime import datetime
 import sklearn.neural_network as nn
 
 
 def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
     # print(f"Now reading file {file_name}")
-    return pd.read_csv(file_name, sep=',', usecols=columns)
+    df = pd.read_csv(file_name, sep=',', usecols=columns)
+    df = df.dropna(axis=0)
+
+    # Already convert date to ordinal values, as after 2018 the time format changes
+    date_format = '%d/%m/%Y' if int(file_name[16:20]) >= 1819 else '%d/%m/%y'
+    df["ORDDate"] = df["Date"].apply(lambda d: datetime.strptime(d, date_format).date().toordinal())
+    return df
 
 
 def read_and_filter_data(country: str, columns: list[str]) -> pd.DataFrame:
@@ -41,37 +47,41 @@ def main() -> None:
 
     # Set-up variables concerning neural network
     no_hidden_layers = 2
-    hidden_layer_size = 30
+    hidden_layer_size = 20
     
     # Read in the data
-    data = read_and_filter_data(country, selected_columns).dropna(axis=0)
-    # print(data)
-
+    data = read_and_filter_data(country, selected_columns)
+    
     # Prepare the data for training a neural network
-    # Make dates an ordinal integer value
-    #data["Date"].apply(lambda d: datetime.date.toordinal(d))
+    # Strip leading and trailing whitespace out of club names to prevent duplicates
+    data[["HomeTeam", "AwayTeam"]] = data[["HomeTeam", "AwayTeam"]].apply(lambda x: x.str.strip())
 
-    # Factorize variables
-    columns_to_factorize = ["HomeTeam", "AwayTeam", "FTR"]
-    mappings = {}
-    for column in columns_to_factorize:
-        new_column, hometeam_mapping = pd.factorize(data[column])
-        data[column] = new_column
-        mappings.update({column: hometeam_mapping})
+    # Normalize ordinal dates to cut down on numerical issues
+    starting_ordinal_date = data['ORDDate'].min()
+    data['ORDDate'] = data['ORDDate'].apply(lambda x: x - starting_ordinal_date)
 
-    data[columns_to_factorize] = data[columns_to_factorize].apply(lambda x: pd.factorize(x)[0])
-    print(mappings['HomeTeam'])
-    print(mappings['FTR'])
+    # Factorize HomeTeam
+    data['HomeTeam'], team_mapping = pd.factorize(data['HomeTeam'])
+    data['AwayTeam'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
 
     # Train the neural network
     class_nn = train_neural_network_classifier(data.drop('Date', axis=1), 'FTR', no_hidden_layers, hidden_layer_size)
 
     # Predict one specific game
-    pred_hometeam = mappings['HomeTeam'].get_loc('Vitesse')
-    pred_awayteam = mappings['AwayTeam'].get_loc('Nijmegen')
-    input_vec = pd.DataFrame({'HomeTeam': pred_hometeam, 'AwayTeam': pred_awayteam}, index=[0])
+    print(team_mapping)
+    pred_hometeam = team_mapping.get_loc('Ajax')
+    pred_awayteam = team_mapping.get_loc('Nijmegen')
+    pred_date = '22/01/2024'
+
+    input_vec = pd.DataFrame(
+        {
+            'HomeTeam': pred_hometeam, 
+            'AwayTeam': pred_awayteam,
+            'ORDDate': datetime.strptime(pred_date, '%d/%m/%Y').date().toordinal(),
+        }, index=[0])
 
     print(class_nn.predict(input_vec))
+    print(data)
 
 if __name__ == "__main__":
     main()
