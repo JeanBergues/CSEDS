@@ -8,9 +8,7 @@
 
 from __future__ import annotations
 import glob
-
 import pandas as pd
-import numpy as np
 from datetime import datetime
 
 
@@ -21,7 +19,7 @@ def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
 
     # Already convert date to ordinal values, as after 2018 the time format changes
     date_format = '%d/%m/%Y' if int(file_name[16:20]) >= 1819 else '%d/%m/%y'
-    df["ORDDate"] = df["Date"].apply(lambda d: datetime.strptime(d, date_format).date().toordinal())
+    df["DateNR"] = df["Date"].apply(lambda d: datetime.strptime(d, date_format).date().toordinal())
     return df
 
 
@@ -35,7 +33,7 @@ def read_and_filter_data(country: str, columns: list[str]) -> pd.DataFrame:
 def main() -> None:
     # Set-up variables concerning data
     country = 'nl'
-    selected_columns = ["Date", "HomeTeam", "AwayTeam", "FTR"]
+    selected_columns = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
 
     # Set-up variables concerning neural network
     no_hidden_layers = 2
@@ -44,36 +42,25 @@ def main() -> None:
     # Read in the data
     data = read_and_filter_data(country, selected_columns)
     
-    # Prepare the data for training a neural network
     # Strip leading and trailing whitespace out of club names to prevent duplicates
     data[["HomeTeam", "AwayTeam"]] = data[["HomeTeam", "AwayTeam"]].apply(lambda x: x.str.strip())
 
     # Normalize ordinal dates to cut down on numerical issues
-    starting_ordinal_date = data['ORDDate'].min()
-    data['ORDDate'] = data['ORDDate'].apply(lambda x: x - starting_ordinal_date)
+    starting_ordinal_date = data["DateNR"].min()
+    data["DateNR"] = data["DateNR"].apply(lambda x: x - starting_ordinal_date)
 
-    # Factorize HomeTeam
-    data['HomeTeam'], team_mapping = pd.factorize(data['HomeTeam'])
-    data['AwayTeam'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
+    # Factorize HomeTeam and apply the same mapping to AwayTeam
+    data['HomeTeamID'], team_mapping = pd.factorize(data['HomeTeam'])
+    data['AwayTeamID'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
 
-    # Train the neural network
-    class_nn = train_neural_network_classifier(data.drop('Date', axis=1), 'FTR', no_hidden_layers, hidden_layer_size)
+    # Add a score-difference column
+    data['ScoreDiff'] = data['FTHG'] - data['FTAG']
 
-    # Predict one specific game
+    # Export the data
+    print(data.columns)
+    print(starting_ordinal_date)
     print(team_mapping)
-    pred_hometeam = team_mapping.get_loc('Ajax')
-    pred_awayteam = team_mapping.get_loc('Nijmegen')
-    pred_date = '22/01/2024'
-
-    input_vec = pd.DataFrame(
-        {
-            'HomeTeam': pred_hometeam, 
-            'AwayTeam': pred_awayteam,
-            'ORDDate': datetime.strptime(pred_date, '%d/%m/%Y').date().toordinal(),
-        }, index=[0])
-
-    print(class_nn.predict(input_vec))
-    print(data)
+    data.to_csv('processed_data.csv')
 
 if __name__ == "__main__":
     main()
