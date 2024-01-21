@@ -10,6 +10,7 @@ from __future__ import annotations
 import glob
 import pandas as pd
 from datetime import datetime
+import numpy as np
 
 
 def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
@@ -28,6 +29,44 @@ def read_and_filter_data(country: str, columns: list[str]) -> pd.DataFrame:
     
     dataframes = [read_single_csv(file, columns) for file in files]
     return pd.concat(dataframes)
+
+
+def transform_result_into_number(result, htID, atID, clubID):
+    if result == 'A':
+        if atID == clubID:
+            return 1
+        else:
+            return -1
+        
+    elif result == 'H':
+        if htID == clubID:
+            return 1
+        else:
+            return -1
+        
+    else:
+        return 0
+
+
+def find_previous_club_result(data: pd.DataFrame, clubID, game_ord_date):
+    older_data = data[data['DateNR'] < game_ord_date]
+    try:
+        last_game = older_data[(older_data['HomeTeamID'] == clubID) | (older_data['AwayTeamID'] == clubID)].iloc[-1]
+    except IndexError as e:
+        return 0
+    return transform_result_into_number(last_game['FTR'], last_game['HomeTeamID'], last_game['AwayTeamID'], clubID)
+
+
+def find_previous_duel_result(data: pd.DataFrame, htID, atID, game_ord_date):
+    older_data = data[data['DateNR'] < game_ord_date]
+    try:
+        last_game = older_data[((older_data['HomeTeamID'] == htID) & (older_data['AwayTeamID'] == atID)) | ((older_data['HomeTeamID'] == atID) & (older_data['AwayTeamID'] == htID))].iloc[-1]
+    except IndexError as e:
+        return 0
+    if last_game['HomeTeamID'] == htID:
+        return transform_result_into_number(last_game['FTR'], htID, atID, htID)
+    else:
+        return transform_result_into_number(last_game['FTR'], atID, htID, htID)
 
 
 def main() -> None:
@@ -51,6 +90,21 @@ def main() -> None:
 
     # Add a score-difference column
     data['ScoreDiff'] = data['FTHG'] - data['FTAG']
+
+    # Add last match results
+    N = data["DateNR"].size
+    prev_ht_results = np.zeros(N)
+    prev_at_results = np.zeros(N)
+    prev_duel_results = np.zeros(N)
+
+    for i, row in data.iterrows():
+        prev_ht_results[i] = find_previous_club_result(data, row['HomeTeamID'], row["DateNR"])
+        prev_at_results[i] = find_previous_club_result(data, row['AwayTeamID'], row["DateNR"])
+        prev_duel_results[i] = find_previous_duel_result(data, row['HomeTeamID'], row['AwayTeamID'], row["DateNR"])
+
+    data['PrevHTR'] = prev_ht_results
+    data['PrevATR'] = prev_at_results
+    data['PrevDR'] = prev_duel_results
 
     # Export the data
     print(data.columns)
