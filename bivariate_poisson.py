@@ -53,9 +53,12 @@ def calc_s(x, y, alpha_home, alpha_away, beta_home, beta_away, lambda3, delta):
 
 def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
 # Function for calculating the log likelihood of bivariate poisson dist
+    
+    ####### TO DO
+    ####### checkl for NAN for new teams in f_t
     # Length of data
     N = len(X[0])
-    T = len(X)
+    T = len(data)
 
     # Setting log likelihood to 0 first
     ll = 0
@@ -77,15 +80,15 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
             schedule_round = schedule[schedule['round'] == t]
             for i in range(len(schedule_round)):
                 # Get match opponents
-                home = schedule_round[i]["HomeTeam"]
-                away = schedule_round[i]["AwayTeam"]
+                home = schedule_round["HomeTeam"][i]
+                away = schedule_round["AwayTeam"][i]
 
                 # Get attack strength and defense strength of specific teams from f_t
                 # The order of f_t is same as unique list
                 home_index = all_teams.index(home)
                 away_index = all_teams.index(away)
 
-                sum_1 += np.log(pdf_bp(data[t][home], data[t][away], f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
+                sum_1 += np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
 
             w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B)))
 
@@ -97,8 +100,8 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
             schedule_round = schedule[schedule['round'] == t]
             for i in range(len(schedule_round)):
                 # Get match opponents
-                home = schedule_round[i]["HomeTeam"]
-                away = schedule_round[i]["AwayTeam"]
+                home = schedule_round["HomeTeam"][i]
+                away = schedule_round["AwayTeam"][i]
 
                 # Get index of teams
                 home_index = all_teams.index(home)
