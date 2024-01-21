@@ -1,0 +1,46 @@
+# Read the CSV file
+import pandas as pd
+
+df = pd.read_csv('N1 (2).csv')
+
+df = df[['HomeTeam', 'AwayTeam']]
+# Extract unique club names from 'HomeTeam' and 'AwayTeam' columns
+clubs = df['HomeTeam'].append(df['AwayTeam']).unique()
+
+# Create a new DataFrame to store the counts
+club_counts_df = pd.DataFrame(index=df.index)
+
+# Iterate over each club
+for club in clubs:
+    # Create a new column for the club and initialize with zeros
+    club_counts_df[f'{club}Count'] = 0
+
+    # Initialize count outside the loop
+    count = 0
+
+    # Iterate through the rows of the original DataFrame
+    for i in range(len(df)):
+        # Use iloc to get the i-th row
+        row = df.iloc[i]
+
+        # Check if the club is in either 'HomeTeam' or 'AwayTeam'
+        if club in [row['HomeTeam'], row['AwayTeam']]:
+            count += 1
+
+        # Assign the count value to the club's column
+        club_counts_df.at[i, f'{club}Count'] = count
+
+# Concatenate the original DataFrame with the new club counts DataFrame
+result_df = pd.concat([df, club_counts_df], axis=1)
+
+# Display the result DataFrame
+#display(result_df)
+
+# Find the maximum value for each row
+max_values_per_row = result_df.iloc[:, 2:].max(axis=1)
+
+# Add the maximum values as a new column in the result DataFrame
+result_df['Round'] = max_values_per_row
+
+# Display the updated result DataFrame
+display(result_df[['HomeTeam', 'AwayTeam', 'Round']])
