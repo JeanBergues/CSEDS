@@ -12,7 +12,6 @@ import glob
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import sklearn.neural_network as nn
 
 
 def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
@@ -31,13 +30,6 @@ def read_and_filter_data(country: str, columns: list[str]) -> pd.DataFrame:
     
     dataframes = [read_single_csv(file, columns) for file in files]
     return pd.concat(dataframes)
-
-
-def train_neural_network_classifier(data: pd.DataFrame, y_name: str, no_hidden_layers: int, hidden_layer_size: int):
-    # TODO: tweak other parameters in regressor function
-    neural_network = nn.MLPClassifier(hidden_layer_sizes=(no_hidden_layers, hidden_layer_size))
-    neural_network.fit(data.drop(y_name, axis=1), data[y_name])
-    return neural_network
 
 
 def main() -> None:
