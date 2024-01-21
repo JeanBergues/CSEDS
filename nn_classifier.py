@@ -5,7 +5,7 @@ from datetime import datetime as dt
 
 def train_neural_network_classifier(data: pd.DataFrame, y_name: str, no_hidden_layers: int, hidden_layer_size: int):
     # TODO: tweak other parameters in regressor function
-    neural_network = nn.MLPClassifier(hidden_layer_sizes=(no_hidden_layers, hidden_layer_size))
+    neural_network = nn.MLPClassifier(hidden_layer_sizes=(no_hidden_layers, hidden_layer_size), random_state=1234)
     neural_network.fit(data.drop(y_name, axis=1), data[y_name])
     return neural_network
 
@@ -54,9 +54,9 @@ def main() -> None:
     data = pd.read_csv('processed_data.csv')
 
     # NN parameters
-    no_hidden_layers = 30
-    hidden_layer_size = 100
-    columns_to_use = ['FTR', 'DateNR', 'HomeTeamID', 'AwayTeamID']
+    no_hidden_layers = 2
+    hidden_layer_size = 8
+    columns_to_use = ['FTR', 'DateNR', 'HomeTeamID', 'AwayTeamID','PrevHTR','PrevATR','PrevDR']
 
     # Recreate data samples from Koopman
     training_data_cutoff = dt.strptime('31/07/09', '%d/%m/%y').date().toordinal() - starting_ordinal_date
@@ -65,8 +65,6 @@ def main() -> None:
     oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
     oos_data = data[data['DateNR'] < oss_data_cutoff]
     oos_data = oos_data[oos_data['DateNR'] >= training_data_cutoff]
-
-    test_match = oos_data.iloc[300]
     
     # Train the neural network
     class_nn = train_neural_network_classifier(training_data[columns_to_use], 'FTR', no_hidden_layers, hidden_layer_size)
