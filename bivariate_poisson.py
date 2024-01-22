@@ -152,7 +152,6 @@ def train_model_bp(X, Y):
     f = []
     f.append(calc_ini_f())
 
-
 data = pd.read_csv("/Users/romnickevangelista/Documents/CSEDS/data_nl/season0001.csv")
 print((data["HomeTeam"].to_list() + data["AwayTeam"].to_list())[307])
 print(data.iloc[1]["AwayTeam"])
