@@ -152,8 +152,16 @@ def train_model_bp(X, Y):
     f = []
     f.append(calc_ini_f())
 
-data = pd.read_csv("/Users/romnickevangelista/Documents/CSEDS/data_nl/season0001.csv")
-print((data["HomeTeam"].to_list() + data["AwayTeam"].to_list())[307])
-print(data.iloc[1]["AwayTeam"])
-print(len(data["HomeTeam"]))
+# Assuming df1, df2, df3 are your data frames
+df1 = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+df2 = pd.DataFrame({'A': [5, 6], 'B': [7, 8], 'C': [9, 10]})
+df3 = pd.DataFrame({'A': [11, 12], 'B': [13, 14], 'C': [15, 16], 'D': [17, 18]})
 
+# List of data frames
+dfs = [df1, df2, df3]
+
+# Concatenate data frames vertically
+result_df = pd.concat(dfs, ignore_index=True)
+
+# Print the result
+print(result_df)
