@@ -37,7 +37,7 @@ def all_data():
            data21, data22, data23, data24, data25]
     count = 1
     for i in dfs:
-        i["Dataset"] = 1
+        i["Season"] = 1
         count += 1
     
     data = pd.concat(dfs, ignore_index=True)
@@ -104,17 +104,29 @@ def create_panel_data():
    
             result_df.loc[round_num, home] = round_data.iloc[i]["FTHG"]
             result_df.loc[round_num, away] = round_data.iloc[i]["FTAG"]
-        
-        # for team in teams:
-        #     # Checking if team plays in round. If team plays store it in new dataframe
-        #     if not round_data[round_data["HomeTeam"] == team].empty:
-        #         result_df.at[round_num, team] = round_data.loc[round_data["HomeTeam"] == team, 'FTHG']
-                
-        #     elif not round_data[round_data["AwayTeam"] == team].empty:
-        #         result_df.at[round_num, team] = round_data.loc[round_data["AwayTeam"] == team,'FTAG']
-                
-        #     else:
-        #         result_df.at[round_num, team] = np.nan
     
     result_df.to_csv("panel_data.csv")
 
+def split_data(train_season):
+    data = pd.read_csv('BP_data\clean_all_data_with_rounds.csv')
+    schema = pd.read_csv('BP_data\clean_all_data_with_rounds.csv')
+
+    # Training data
+    train_data = data[data["Season"] <= train_season]
+    max_round = max(train_data["round"])
+    train_schema = schema.head(max_round)
+
+    # Test Data
+    test_data = data[data["Season"] > train_season]
+    test_schema = schema.tail(len(schema) - max_round)
+
+    train_data.to_csv("train_data_BP", index=False)
+    train_schema.to_csv("train_schema_BP", index=False)
+    test_data.to_csv("test_data_BP", index=False)
+    test_schema.to_csv("test_schema_BP", index=False)
+
+
+all_data()
+clean_all_data()
+create_panel_data()
+split_data(19)
