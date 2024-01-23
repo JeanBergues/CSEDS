@@ -57,7 +57,7 @@ def all_data():
             occured_teams.append(data.iloc[i]["AwayTeam"])
         data.loc[i, "round"] = count
     
-    data.to_csv("All_data_with_rounds.csv", index=False)
+    data.to_csv("BP_data\All_data_with_rounds.csv", index=False)
     return
 
 def clean_all_data():
@@ -81,7 +81,7 @@ def clean_all_data():
     df.loc[df["HomeTeam"] == "Feyenoord ","HomeTeam"] = "Feyenoord"
 
     df.reset_index()
-    df.to_csv("clean_all_data_with_rounds.csv", index=False)
+    df.to_csv("BP_data\clean_all_data_with_rounds.csv", index=False)
 
 def create_panel_data():
     df = pd.read_csv("clean_all_data_with_rounds.csv")
@@ -105,7 +105,7 @@ def create_panel_data():
             result_df.loc[round_num, home] = round_data.iloc[i]["FTHG"]
             result_df.loc[round_num, away] = round_data.iloc[i]["FTAG"]
     
-    result_df.to_csv("panel_data.csv")
+    result_df.to_csv("BP_data\panel_data.csv")
 
 def split_data(train_season):
     data = pd.read_csv('BP_data\clean_all_data_with_rounds.csv')
