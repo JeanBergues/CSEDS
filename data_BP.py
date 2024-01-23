@@ -35,6 +35,10 @@ def all_data():
            data11, data12, data13, data14, data15,
            data16, data17, data18, data19, data20,
            data21, data22, data23, data24, data25]
+    count = 1
+    for i in dfs:
+        i["Dataset"] = 1
+        count += 1
     
     data = pd.concat(dfs, ignore_index=True)
     data = data.dropna(subset=["HomeTeam", "AwayTeam"])
@@ -114,7 +118,3 @@ def create_panel_data():
     
     result_df.to_csv("panel_data.csv")
 
-
-# clean_data()
-# clean_all_data()
-create_panel_data()

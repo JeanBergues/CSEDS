@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import pandas as pd
+from scipy.optimize import minimize
 
 def create_A_B_matrix(a, b, N):
     # Creates first block
@@ -17,6 +18,9 @@ def create_A_B_matrix(a, b, N):
 
 def pdf_bp(x, y, alpha_it, alpha_jt, beta_it, beta_jt, lambda3, delta):
 # Function to calculate the pdf of a bivariate poisson dist
+    x = int(x)
+    y = int(y)
+
     lambda1 = np.exp(delta + alpha_it - beta_jt)
     lambda2 = np.exp(alpha_jt - beta_it)
     product_component = np.exp(-(lambda1+lambda2+lambda3)) * ((lambda1**x)/(math.factorial(x))) * ((lambda2**y)/(math.factorial(y)))
@@ -27,7 +31,9 @@ def pdf_bp(x, y, alpha_it, alpha_jt, beta_it, beta_jt, lambda3, delta):
 
     return product_component * sum_component
 
-def S(x, y, lambda1, lambda2, q, lambda3, delta):
+def S(x, y, lambda1, lambda2, q, lambda3):
+    x = int(x)
+    y = int(y)
     summation = 0
     for k in range(min(x,y)):
         summation += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (k**q) * (((lambda3)/(lambda1*lambda2))**k)
@@ -40,7 +46,7 @@ def calc_s(x, y, alpha_home, alpha_away, beta_home, beta_away, lambda3, delta):
     lambda2 = np.exp(alpha_away - beta_home)
 
     # Calc U
-    U = S(x, y, lambda1, lambda2, 1, lambda3, delta) / S(x, y, lambda1, lambda2, 0, lambda3, delta)
+    U = (S(x, y, lambda1, lambda2, 1, lambda3) + 1e-8) / (S(x, y, lambda1, lambda2, 0, lambda3) + 1e-8)
     
     # Calc first derivative
     first_der = []
@@ -51,20 +57,22 @@ def calc_s(x, y, alpha_home, alpha_away, beta_home, beta_away, lambda3, delta):
 
     return first_der
 
-def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
+def ll_biv_poisson(params, data, schedule):
 # Function for calculating the log likelihood of bivariate poisson dist
-    
+    # Define parameters
+    a1, a2, b1, b2, lambda3, delta, *f_ini = params
+
     ####### TO DO
     ####### checkl for NAN for new teams in f_t
     # Length of data
-    N = len(X[0])
     T = len(data)
 
     # Setting log likelihood to 0 first
     ll = 0
 
     # Get list of distinct teams
-    all_teams = data['Teams'].to_list()
+    all_teams = schedule['HomeTeam'].unique().tolist()
+    nr_teams = len(all_teams)
     
     # Defining f_t, A, B
     f = []
@@ -75,7 +83,7 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
     for t in range(T):
         sum_1 = 0
         if t == 0:
-            f.append(calc_ini_f)
+            f.append(f_ini)
 
             schedule_round = schedule[schedule['round'] == t]
             for i in range(len(schedule_round)):
@@ -88,46 +96,47 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
                 home_index = all_teams.index(home)
                 away_index = all_teams.index(away)
 
-                sum_1 += np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
+                sum_1 += np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))
 
-            w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B)))
+            B_all_teams = create_A_B_matrix(b1,b1, nr_teams)
+            w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B_all_teams)))
 
         else:
             empty_list = np.empty(len(f[0]))
             empty_list[:] = np.nan
-            f.append[empty_list]
+            f.append(empty_list)
 
             schedule_round = schedule[schedule['round'] == t]
             for i in range(len(schedule_round)):
                 # Get match opponents
-                home = schedule_round["HomeTeam"][i]
-                away = schedule_round["AwayTeam"][i]
+                home = schedule_round.iloc[i]["HomeTeam"]
+                away = schedule_round.iloc[i]["AwayTeam"]
 
                 # Get index of teams
                 home_index = all_teams.index(home)
                 away_index = all_teams.index(away)
 
                 # Get corresponding data
-                x = data[t][home]
-                y = data[t][away]
+                x = data.iloc[t][home]
+                y = data.iloc[t][away]
 
                 # Calc previous lambda1 and lambda2
                 prev_alpha_home = f[t-1][home_index]
                 prev_alpha_away = f[t-1][away_index]
-                prev_beta_home = f[t-1][home_index + len(f[0])]
-                prev_beta_away = f[t-1][away_index + len(f[0])]
+                prev_beta_home = f[t-1][home_index + nr_teams]
+                prev_beta_away = f[t-1][away_index + nr_teams]
 
                 # Calc s_t
-                s = calc_s(x, y, prev_alpha_home, prev_alpha_away, prev_beta_home, prev_beta_away, a1, a2, b1, b2, lambda3, delta)
+                s = calc_s(x, y, prev_alpha_home, prev_alpha_away, prev_beta_home, prev_beta_away, lambda3, delta)
 
                 # Update f_t
                 f[t][home_index] = w[home_index] + b1 * f[t-1][home_index] + a1 * s[0] # Attack strength home
                 f[t][away_index] = w[away_index] + b1 * f[t-1][away_index] + a1 * s[1] # Attack strength away
-                f[t][home_index + len(f[0])] = w[home_index + len(f[0])] + b2* f[t-1][home_index + len(f[0])] + a2 * s[2] # Defense strength home
-                f[t][away_index + len(f[0])] = w[away_index + len(f[0])] + b2 * f[t-1][away_index + len(f[0])] + a2 * s[3] # Defense strength away
+                f[t][home_index + nr_teams] = w[home_index + nr_teams] + b2* f[t-1][home_index + nr_teams] + a2 * s[2] # Defense strength home
+                f[t][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t-1][away_index + nr_teams] + a2 * s[3] # Defense strength away
 
                 # Updating sum
-                sum_1 += np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + len(f[0])], f[t][away_index + len(f[0])], delta, lambda3))
+                sum_1 += np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))
 
             
             # Filling in f_t when team does not play
@@ -143,25 +152,36 @@ def ll_biv_poisson(data, schedule, a1, a2, b1, b2, lambda3, delta):
         # Updating ll
         ll += sum_1
 
-    return ll
+    return -ll
 
 def calc_ini_f():
     return
 
-def train_model_bp(X, Y):
-    f = []
-    f.append(calc_ini_f())
+def train_model_bp():
+    # read data
+    schedule = pd.read_csv("BP_data\clean_all_data_with_rounds.csv")
+    data = pd.read_csv("BP_data\panel_data.csv")
 
-# Assuming df1, df2, df3 are your data frames
-df1 = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
-df2 = pd.DataFrame({'A': [5, 6], 'B': [7, 8], 'C': [9, 10]})
-df3 = pd.DataFrame({'A': [11, 12], 'B': [13, 14], 'C': [15, 16], 'D': [17, 18]})
+    # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
+    a1_ini = 0.1
+    a2_ini = 0.1
+    b1_ini = 0.1
+    b2_ini = 0.1
+    lambda3_ini = np.cov(schedule["FTHG"], schedule["FTAG"])[0,1]
+    delta_ini = 0.1
+    f_ini = [0 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
-# List of data frames
-dfs = [df1, df2, df3]
+    initial_values = []
+    initial_values.append(a1_ini)
+    initial_values.append(a2_ini)
+    initial_values.append(b1_ini)
+    initial_values.append(b2_ini)
+    initial_values.append(lambda3_ini)
+    initial_values.append(delta_ini)
+    for i in range(len(f_ini)):
+        initial_values.append(f_ini[i])
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), method='Nelder-Mead')
+    print(result)
 
-# Concatenate data frames vertically
-result_df = pd.concat(dfs, ignore_index=True)
 
-# Print the result
-print(result_df)
+train_model_bp()
