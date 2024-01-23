@@ -157,11 +157,7 @@ def ll_biv_poisson(params, data, schedule):
 def calc_ini_f():
     return
 
-def train_model_bp():
-    # read data
-    schedule = pd.read_csv("BP_data\clean_all_data_with_rounds.csv")
-    data = pd.read_csv("BP_data\panel_data.csv")
-
+def train_model_bp(data, schedule):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
     a1_ini = 0.1
     a2_ini = 0.1
@@ -180,8 +176,23 @@ def train_model_bp():
     initial_values.append(delta_ini)
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
+
     result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), method='Nelder-Mead')
+
     print(result)
+    est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
+    df_results = pd.DataFrame({"a1": [est_a1],
+                               "a2": [est_a2],
+                               "b1": [est_b1],
+                               "b2": [est_b2],
+                               "lambda3": [est_lambda3],
+                               "delta": [est_delta],
+                               "f": [est_f]})
+    df_results.to_csv("BP_results.csv", , index=False)
 
+# Read Data
+training_schedule = pd.read_csv("BP_data\clean_all_data_with_rounds.csv")
+training_data = pd.read_csv("BP_data\panel_data.csv")
 
-train_model_bp()
+# Train model
+train_model_bp(training_data, training_schedule)
