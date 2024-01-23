@@ -2,7 +2,7 @@ import numpy as np
 import math
 import pandas as pd
 
-def clean_data():
+def all_data():
     # Reading all data
     data1 = pd.read_csv("data_nl\season0000.csv",on_bad_lines='skip')
     data2 = pd.read_csv("data_nl\season0001.csv",on_bad_lines='skip')
@@ -37,55 +37,84 @@ def clean_data():
            data21, data22, data23, data24, data25]
     
     data = pd.concat(dfs, ignore_index=True)
-
+    data = data.dropna(subset=["HomeTeam", "AwayTeam"])
+    data.reset_index()
     data["round"] = np.nan
     count = 0
     occured_teams = []
     for i in range(len(data)):
-        if data["HomeTeam"][i] in occured_teams or data["AwayTeam"][i] in occured_teams:
+        if data.iloc[i]["HomeTeam"] in occured_teams or data.iloc[i]["AwayTeam"] in occured_teams:
             count += 1
             occured_teams = []
+            occured_teams.append(data.iloc[i]["HomeTeam"])
+            occured_teams.append(data.iloc[i]["AwayTeam"])
         else:
-            occured_teams.append(data["HomeTeam"][i])
-            occured_teams.append(data["AwayTeam"][i])
-        data["round"][i] = count
+            occured_teams.append(data.iloc[i]["HomeTeam"])
+            occured_teams.append(data.iloc[i]["AwayTeam"])
+        data.loc[i, "round"] = count
     
-    data.to_csv("All_data_with_rounds.csv")
+    data.to_csv("All_data_with_rounds.csv", index=False)
     return
+
+def clean_all_data():
+    df = pd.read_csv("All_data_with_rounds.csv")
+    df = df.dropna(subset=["HomeTeam", "AwayTeam"])
+    
+    # Cleaning when the same club is written differently. Now all teams that occur in HomeTeam are the same as AwayTeam
+    df.loc[df["AwayTeam"] == "Roda JC","AwayTeam"] = "Roda"
+    df.loc[df["AwayTeam"] == "Sparta Rotterdam","AwayTeam"] = "Sparta"
+
+    df.loc[df["HomeTeam"] == "Roda JC","HomeTeam"] = "Roda"
+    df.loc[df["HomeTeam"] == "Roda ","HomeTeam"] = "Roda"
+    df.loc[df["HomeTeam"] == "Ajax ","HomeTeam"] = "Ajax"
+    df.loc[df["HomeTeam"] == "Graafschap ","HomeTeam"] = "Graafschap"
+    df.loc[df["HomeTeam"] == "Groningen ","HomeTeam"] = "Groningen"
+    df.loc[df["HomeTeam"] == "Utrecht ","HomeTeam"] = "Utrecht"
+    df.loc[df["HomeTeam"] == "Vitesse ","HomeTeam"] = "Vitesse"
+    df.loc[df["HomeTeam"] == "Willem II ","HomeTeam"] = "Willem II"
+    df.loc[df["HomeTeam"] == "Sparta Rotterdam","HomeTeam"] = "Sparta"
+    df.loc[df["HomeTeam"] == "Heracles ","HomeTeam"] = "Heracles"
+    df.loc[df["HomeTeam"] == "Feyenoord ","HomeTeam"] = "Feyenoord"
+
+    df.reset_index()
+    df.to_csv("clean_all_data_with_rounds.csv", index=False)
 
 def create_panel_data():
-    df = pd.read_csv("All_data_with_rounds.csv")
+    df = pd.read_csv("clean_all_data_with_rounds.csv")
 
     # Get distinct teams
-    teams = df['AwayTeam'].unique()
-    print(teams)
-    return
-
+    teams = df['HomeTeam'].unique()
+    
     # Initialize an empty DataFrame with teams as columns
-    result_df = pd.DataFrame(columns=teams, index=range(int(max(df["round"]))))
+    result_df = pd.DataFrame(columns=teams, index=range(int(max(df["round"]) +1)))
 
     # Iterate over rounds and teams to fill in the goals
     for round_num in sorted(df['round'].unique()):
         round_data = df[df['round'] == round_num]
-    
-        for team in teams:
-            print(round_data)
-            # Checking if team plays in round. If team plays store it in new dataframe
-            if not round_data[round_data["HomeTeam"] == team].empty:
-                result_df.at[round_num, team] = round_data[round_data["HomeTeam"] == team]['FTHG'][0]
-                print(round_data[round_data["HomeTeam"] == team]['FTHG'][0])
-                
 
-            elif not round_data[round_data["AwayTeam"] == team].empty:
-                result_df.at[round_num, team] = round_data[round_data["AwayTeam"] == team]['FTAG'][0]
-                print(round_data[round_data["AwayTeam"] == team]['FTAG'][0])
+        for i in range(len(round_data)):
+            # print(round_data["HomeTeam"][i])
+            
+            home = round_data.iloc[i]["HomeTeam"]
+            away = round_data.iloc[i]["AwayTeam"]
+   
+            result_df.loc[round_num, home] = round_data.iloc[i]["FTHG"]
+            result_df.loc[round_num, away] = round_data.iloc[i]["FTAG"]
+        
+        # for team in teams:
+        #     # Checking if team plays in round. If team plays store it in new dataframe
+        #     if not round_data[round_data["HomeTeam"] == team].empty:
+        #         result_df.at[round_num, team] = round_data.loc[round_data["HomeTeam"] == team, 'FTHG']
                 
-
-            else:
-                result_df.at[round_num, team] = np.nan
+        #     elif not round_data[round_data["AwayTeam"] == team].empty:
+        #         result_df.at[round_num, team] = round_data.loc[round_data["AwayTeam"] == team,'FTAG']
+                
+        #     else:
+        #         result_df.at[round_num, team] = np.nan
     
     result_df.to_csv("panel_data.csv")
 
-# df = pd.read_csv("All_data_with_rounds.csv")
-# print(df[df["HomeTeam"] == "Sparta"]['FTHG'][0])
+
+# clean_data()
+# clean_all_data()
 create_panel_data()
