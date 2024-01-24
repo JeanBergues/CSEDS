@@ -24,8 +24,10 @@ def pdf_bp(x, y, alpha_it, alpha_jt, beta_it, beta_jt, lambda3, delta):
     lambda1 = np.exp(delta + alpha_it - beta_jt)
     lambda2 = np.exp(alpha_jt - beta_it)
     product_component = np.exp(-(lambda1+lambda2+lambda3)) * ((lambda1**x)/(math.factorial(x))) * ((lambda2**y)/(math.factorial(y)))
-
     sum_component = 0
+    if min(x,y) == 0:
+        sum_component += math.comb(x, 0) * math.comb(y, 0) * math.factorial(0) * (((lambda3)/(lambda1*lambda2))**0)
+
     for k in range(min(x, y)):
         sum_component += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (((lambda3)/(lambda1*lambda2))**k)
 
@@ -35,6 +37,9 @@ def S(x, y, lambda1, lambda2, q, lambda3):
     x = int(x)
     y = int(y)
     summation = 0
+    if min(x,y) == 0:
+        summation += math.comb(x, 0) * math.comb(y, 0) * math.factorial(0) * (0**q) * (((lambda3)/(lambda1*lambda2))**0)
+
     for k in range(min(x,y)):
         summation += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (k**q) * (((lambda3)/(lambda1*lambda2))**k)
     return summation
@@ -138,7 +143,6 @@ def ll_biv_poisson(params, data, schedule):
                 # Updating sum
                 sum_1 += np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))
 
-            
             # Filling in f_t when team does not play
             index_no_play = np.where(np.isnan(f[t]))[0]
             teams_no_play = [i for i in index_no_play if i < len(all_teams)]
@@ -151,17 +155,16 @@ def ll_biv_poisson(params, data, schedule):
         
         # Updating ll
         ll += sum_1
-
     return -ll
 
 def train_model_bp(data, schedule):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
-    a1_ini = 0.15
-    a2_ini = 0.15
-    b1_ini = 0.15
-    b2_ini = 0.15
+    a1_ini = 0.4
+    a2_ini = 0.4
+    b1_ini = 0.4
+    b2_ini = 0.4
     lambda3_ini = np.cov(schedule['FTHG'], schedule['FTAG'])[0,1]
-    delta_ini = 0.1
+    delta_ini = 0.3
     f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
     initial_values = []
@@ -177,7 +180,7 @@ def train_model_bp(data, schedule):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds)
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='L-BFGS-B')
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
