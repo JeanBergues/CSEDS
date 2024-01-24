@@ -154,18 +154,15 @@ def ll_biv_poisson(params, data, schedule):
 
     return -ll
 
-def calc_ini_f():
-    return
-
 def train_model_bp(data, schedule):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
-    a1_ini = 0.1
-    a2_ini = 0.1
-    b1_ini = 0.1
-    b2_ini = 0.1
+    a1_ini = 0.15
+    a2_ini = 0.15
+    b1_ini = 0.15
+    b2_ini = 0.15
     lambda3_ini = np.cov(schedule['FTHG'], schedule['FTAG'])[0,1]
     delta_ini = 0.1
-    f_ini = [0.1 for i in range(2*len(schedule["HomeTeam"].unique()))]
+    f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
     initial_values = []
     initial_values.append(a1_ini)
@@ -174,10 +171,13 @@ def train_model_bp(data, schedule):
     initial_values.append(b2_ini)
     initial_values.append(lambda3_ini)
     initial_values.append(delta_ini)
+
+    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,None), (-2,2)]
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
+        bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), method='L-BFGS-B')
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds)
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
