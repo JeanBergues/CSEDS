@@ -37,6 +37,7 @@ def S(x, y, lambda1, lambda2, q, lambda3):
     x = int(x)
     y = int(y)
     summation = 0
+
     if min(x,y) == 0:
         summation += math.comb(x, 0) * math.comb(y, 0) * math.factorial(0) * (0**q) * (((lambda3)/(lambda1*lambda2))**0)
 
@@ -155,17 +156,18 @@ def ll_biv_poisson(params, data, schedule):
         
         # Updating ll
         ll += sum_1
+    print(ll)
     return -ll
 
 def train_model_bp(data, schedule):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
-    a1_ini = 0.4
-    a2_ini = 0.4
-    b1_ini = 0.4
-    b2_ini = 0.4
+    a1_ini = 0.1
+    a2_ini = 0.1
+    b1_ini = 0.1
+    b2_ini = 0.1
     lambda3_ini = np.cov(schedule['FTHG'], schedule['FTAG'])[0,1]
-    delta_ini = 0.3
-    f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
+    delta_ini = np.cov(schedule['FTHG'], schedule['FTAG'])[0,0]
+    f_ini = [np.cov(schedule['FTHG'], schedule['FTAG'])[1,1] for i in range(2*len(schedule["HomeTeam"].unique()))]
 
     initial_values = []
     initial_values.append(a1_ini)
@@ -175,7 +177,7 @@ def train_model_bp(data, schedule):
     initial_values.append(lambda3_ini)
     initial_values.append(delta_ini)
 
-    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,None), (-2,2)]
+    bounds = [(0,None), (0,None), (0,None), (0,None), (0,None), (-2,2)]
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
@@ -194,8 +196,8 @@ def train_model_bp(data, schedule):
     df_results.to_csv("BP_results.csv", index=False)
 
 # Read Data
-training_schedule = pd.read_csv("BP_data\\train_schedule_BP.csv")
-training_data = pd.read_csv("BP_data\\train_data_BP.csv")
+training_schedule = pd.read_csv("BP_data/train_schedule_BP.csv")
+training_data = pd.read_csv("BP_data/train_data_BP.csv")
 
 # Train model
 train_model_bp(training_data, training_schedule)
