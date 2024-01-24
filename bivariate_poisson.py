@@ -163,9 +163,9 @@ def train_model_bp(data, schedule):
     a2_ini = 0.1
     b1_ini = 0.1
     b2_ini = 0.1
-    lambda3_ini = np.cov(schedule["FTHG"], schedule["FTAG"])[0,1]
+    lambda3_ini = np.cov(schedule['FTHG'], schedule['FTAG'])[0,1]
     delta_ini = 0.1
-    f_ini = [0 for i in range(2*len(schedule["HomeTeam"].unique()))]
+    f_ini = [0.1 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
     initial_values = []
     initial_values.append(a1_ini)
@@ -177,7 +177,7 @@ def train_model_bp(data, schedule):
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), method='Nelder-Mead')
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), method='L-BFGS-B')
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
@@ -188,11 +188,11 @@ def train_model_bp(data, schedule):
                                "lambda3": [est_lambda3],
                                "delta": [est_delta],
                                "f": [est_f]})
-    df_results.to_csv("BP_results.csv", , index=False)
+    df_results.to_csv("BP_results.csv", index=False)
 
 # Read Data
-training_schedule = pd.read_csv("BP_data\clean_all_data_with_rounds.csv")
-training_data = pd.read_csv("BP_data\panel_data.csv")
+training_schedule = pd.read_csv("BP_data\\train_schedule_BP.csv")
+training_data = pd.read_csv("BP_data\\train_data_BP.csv")
 
 # Train model
 train_model_bp(training_data, training_schedule)
