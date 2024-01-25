@@ -148,7 +148,6 @@ def ll_biv_poisson(params, data, schedule):
                 f[t][away_index] = w[away_index] + b1 * f[t-1][away_index] + a1 * s[1] # Attack strength away
                 f[t][home_index + nr_teams] = w[home_index + nr_teams] + b2 * f[t-1][home_index + nr_teams] + a2 * s[2] # Defense strength home
                 f[t][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t-1][away_index + nr_teams] + a2 * s[3] # Defense strength away
-                print(a1, a2, b1, b2, delta, lambda3)
                 # Updating sum
                 sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
                 # print(sum_1)
@@ -163,9 +162,10 @@ def ll_biv_poisson(params, data, schedule):
                 # We dont update ll for these team since no opponent
                 # Eventually it will update since there needs to be certain matches a season
 
-            # print(f[t])
         # Updating ll
         ll += sum_1
+
+    print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
     print(ll)
     return -ll
 
