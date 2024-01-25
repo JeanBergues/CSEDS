@@ -20,7 +20,9 @@ def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
 
     # Already convert date to ordinal values, as after 2018 the time format changes
     date_format = '%d/%m/%Y' if int(file_name[16:20]) >= 1819 else '%d/%m/%y'
+    season = int(file_name[18:20])
     df["DateNR"] = df["Date"].apply(lambda d: datetime.strptime(d, date_format).date().toordinal())
+    df["Season"] = df["Date"].apply(lambda d: season)
     return df
 
 
@@ -91,25 +93,76 @@ def main() -> None:
     # Add a score-difference column
     data['ScoreDiff'] = data['FTHG'] - data['FTAG']
 
+    # Add last season placement
+    for t in range(1, 25):
+        season_points = {}
+        season_data = data[data['Season'] == t]
+        previous_season_data = data[data['Season'] == t-1]
+        for _, row in previous_season_data.iterrows():
+            # Add teams into dict if not present yet
+            if row.HomeTeamID not in season_points:
+                season_points[row.HomeTeamID] = 0
+            if row.AwayTeamID not in season_points:
+                season_points[row.AwayTeamID] = 0
+            
+            # Calculate the points gained
+            if row.FTR == 'H':
+                season_points[row.HomeTeamID] += 3
+            elif row.FTR == 'A':
+                season_points[row.AwayTeamID] += 3
+            else:
+                season_points[row.HomeTeamID] += 1
+                season_points[row.AwayTeamID] += 1
+
+        ordered_season_points = dict(sorted(season_points.items(), key=lambda item: item[1], reverse=True))
+
+        for _, row in season_data.iterrows():
+            try:
+                hPos = list(ordered_season_points.keys()).index(row.HomeTeamID)
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPos'] = hPos
+                hPoints = ordered_season_points[row.HomeTeamID]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPoints'] = hPoints
+            
+            except (ValueError, KeyError):
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPos'] = 18
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPoints'] = 0
+
+            try:
+                aPos = list(ordered_season_points.keys()).index(row.AwayTeamID)
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPos'] = aPos
+                aPoints = ordered_season_points[row.AwayTeamID]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = aPoints
+            
+            except (ValueError, KeyError):
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPos'] = 18
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = 0
+
     # Add last match results
-    N = data["DateNR"].size
-    prev_ht_results = np.zeros(N)
-    prev_at_results = np.zeros(N)
-    prev_duel_results = np.zeros(N)
+    ADD_LAST_MATCH_RESULTS = True
 
-    for i, row in data.iterrows():
-        prev_ht_results[i] = find_previous_club_result(data, row['HomeTeamID'], row["DateNR"])
-        prev_at_results[i] = find_previous_club_result(data, row['AwayTeamID'], row["DateNR"])
-        prev_duel_results[i] = find_previous_duel_result(data, row['HomeTeamID'], row['AwayTeamID'], row["DateNR"])
+    if ADD_LAST_MATCH_RESULTS:
+        N = data["DateNR"].size
+        prev_ht_results = np.zeros(N)
+        prev_at_results = np.zeros(N)
+        prev_duel_results = np.zeros(N)
 
-    data['PrevHTR'] = prev_ht_results
-    data['PrevATR'] = prev_at_results
-    data['PrevDR'] = prev_duel_results
+        for i, row in data.iterrows():
+            prev_ht_results[i] = find_previous_club_result(data, row['HomeTeamID'], row["DateNR"])
+            prev_at_results[i] = find_previous_club_result(data, row['AwayTeamID'], row["DateNR"])
+            prev_duel_results[i] = find_previous_duel_result(data, row['HomeTeamID'], row['AwayTeamID'], row["DateNR"])
+
+        data['PrevHTR'] = prev_ht_results
+        data['PrevATR'] = prev_at_results
+        data['PrevDR'] = prev_duel_results
 
     # Export the data
-    print(data.columns)
-    print(starting_ordinal_date)
-    print(team_mapping)
+    PRINT_DATA_INFO = True
+
+    if PRINT_DATA_INFO:
+        print(data.columns)
+        print(starting_ordinal_date)
+        print(team_mapping)
+        
     data.to_csv('processed_data.csv')
 
 if __name__ == "__main__":

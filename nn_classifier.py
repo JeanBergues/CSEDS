@@ -77,33 +77,43 @@ def main() -> None:
     data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
 
     # Rescale categorials
-    max_team = max(data['HomeTeamID'].max(), data['AwayTeamID'].max())
-    data['HomeTeamID'] = data['HomeTeamID'].apply(lambda x: x/max_team)
-    data['AwayTeamID'] = data['AwayTeamID'].apply(lambda x: x/max_team)
+    # max_team = max(data['HomeTeamID'].max(), data['AwayTeamID'].max())
+    # data['HomeTeamID'] = data['HomeTeamID'].apply(lambda x: x/max_team)
+    # data['AwayTeamID'] = data['AwayTeamID'].apply(lambda x: x/max_team)
+
+    # data = pd.get_dummies(data=data, columns=['HomeTeamID', 'AwayTeamID'])
+    # print(o_data)
+
+    # Rescale season results
+    data['HomePrevSeasonPos'] = data['HomePrevSeasonPos'].apply(lambda x: x/18)
+    data['AwayPrevSeasonPos'] = data['AwayPrevSeasonPos'].apply(lambda x: x/18)
+
+    max_points = max(data['HomePrevSeasonPoints'].max(), data['AwayPrevSeasonPoints'].max())
+    data['HomePrevSeasonPoints'] = data['HomePrevSeasonPoints'].apply(lambda x: x/max_points)
+    data['AwayPrevSeasonPoints'] = data['AwayPrevSeasonPoints'].apply(lambda x: x/max_points)
 
     # NN parameters
-    hidden_layer_sizes = np.repeat(5, 2)
-    hidden_layer_sizes = [30, 20, 10]
-    columns_to_use = ['FTR', 'HomeTeamID', 'AwayTeamID','PrevHTR','PrevATR','PrevDR']
+    hidden_layer_sizes = [40, 20]
+    columns_to_not_use = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'DateNR', 'Season', 'ScoreDiff']
     # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
 
     # Recreate data samples from Koopman
-    training_data_cutoff = dt.strptime('31/07/09', '%d/%m/%y').date().toordinal() - starting_ordinal_date
-    training_data = data[data['DateNR'] < training_data_cutoff]
+    training_data = data[(data.Season >= 1) & (data.Season < 18)]
+    oos_data = data[data.Season >= 18]
 
-    oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
-    oos_data = data[data['DateNR'] < oss_data_cutoff]
-    oos_data = oos_data[oos_data['DateNR'] >= training_data_cutoff]
+    # oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
+    # oos_data = data[data['DateNR'] < oss_data_cutoff]
+    # oos_data = oos_data[oos_data['DateNR'] >= training_data_cutoff]
 
     # max_time = data['DateNR'].max()
     # data['DateNR'] = data['DateNR'].apply(lambda x: x/max_time)
     # print(data)
     
     # Train the neural network
-    class_nn = train_neural_network_classifier(training_data[columns_to_use], 'FTR', hidden_layer_sizes)
+    class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', hidden_layer_sizes)
 
     # Predict the oos
-    prediction = class_nn.predict(training_data[columns_to_use].drop('FTR', axis=1))
+    prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
     realization = training_data['FTR']
 
     # Analyze the results
