@@ -240,7 +240,7 @@ def train_model_bp(data, schedule):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead')
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', maxiter = 25000)
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
