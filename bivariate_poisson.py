@@ -2,6 +2,7 @@ import numpy as np
 import math
 import pandas as pd
 from scipy.optimize import minimize
+from ast import literal_eval
 
 def create_A_B_matrix(a, b, N):
     # Creates first block
@@ -112,7 +113,7 @@ def ll_biv_poisson(params, data, schedule):
 
                 sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
 
-            B_all_teams = create_A_B_matrix(b1,b1, nr_teams)
+            B_all_teams = create_A_B_matrix(b1,b2, nr_teams)
             w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B_all_teams)))
 
         else:
@@ -134,7 +135,7 @@ def ll_biv_poisson(params, data, schedule):
                 x = data.iloc[t][home]
                 y = data.iloc[t][away]
 
-                # Calc previous lambda1 and lambda2
+                # get previous lambda1 and lambda2
                 prev_alpha_home = f[t-1][home_index]
                 prev_alpha_away = f[t-1][away_index]
                 prev_beta_home = f[t-1][home_index + nr_teams]
@@ -179,6 +180,15 @@ def train_model_bp(data, schedule):
     delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
     f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
+    # df_ini = pd.read_csv("BP_results.csv")
+    # a1_ini = df_ini["a1"][0]
+    # a2_ini = df_ini["a2"][0]
+    # b1_ini = df_ini["b1"][0]
+    # b2_ini = df_ini["b2"][0]
+    # lambda3_ini = df_ini["lambda3"][0]
+    # delta_ini = df_ini["delta"][0]
+    # f_ini = literal_eval(df_ini["f"][0])
+
     initial_values = []
     initial_values.append(a1_ini)
     initial_values.append(a2_ini)
@@ -187,11 +197,12 @@ def train_model_bp(data, schedule):
     initial_values.append(lambda3_ini)
     initial_values.append(delta_ini)
 
-    bounds = [(-1,1), (-1,1), (-1,1), (-1,1), (0,10), (-1,1)]
+    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
-        bounds.append((-10,10))
-
+        bounds.append((-2,2))
+    # print(len(initial_values))
+    # return
     result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead')
 
     print(result)
