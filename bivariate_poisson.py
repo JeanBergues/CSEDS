@@ -99,8 +99,19 @@ def ll_biv_poisson(params, data, schedule):
         sum_1 = 0
         if t == 0:
             f.append(f_ini)
-
+            
+            # Get all matches from round
             schedule_round = schedule[schedule['round'] == t]
+
+            # Create w
+            B_all_teams = create_A_B_matrix(b1,b2, nr_teams)
+            w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B_all_teams)))
+
+            # Create empty list for f_t+1
+            empty_list = np.empty(len(f[0]))
+            empty_list[:] = np.nan
+            f.append(empty_list)
+
             for i in range(len(schedule_round)):
                 # Get match opponents
                 home = schedule_round["HomeTeam"][i]
@@ -111,11 +122,38 @@ def ll_biv_poisson(params, data, schedule):
                 home_index = all_teams.index(home)
                 away_index = all_teams.index(away)
 
+                # Update log likelihood
                 sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
+                
+                # Get corresponding data
+                x = data.iloc[t][home]
+                y = data.iloc[t][away]
 
-            B_all_teams = create_A_B_matrix(b1,b2, nr_teams)
-            w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B_all_teams)))
+                # get previous lambda1 and lambda2
+                prev_alpha_home = f[t][home_index]
+                prev_alpha_away = f[t][away_index]
+                prev_beta_home = f[t][home_index + nr_teams]
+                prev_beta_away = f[t][away_index + nr_teams]
 
+                # Calc s_t
+                s = calc_s(x, y, prev_alpha_home, prev_alpha_away, prev_beta_home, prev_beta_away, lambda3, delta)
+
+                # Update f_t
+                f[t+1][home_index] = w[home_index] + b1 * f[t][home_index] + a1 * s[0] # Attack strength home
+                f[t+1][away_index] = w[away_index] + b1 * f[t][away_index] + a1 * s[1] # Attack strength away
+                f[t+1][home_index + nr_teams] = w[home_index + nr_teams] + b2 * f[t][home_index + nr_teams] + a2 * s[2] # Defense strength home
+                f[t+1][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t][away_index + nr_teams] + a2 * s[3] # Defense strength away
+
+            # Filling in f_t when team does not play
+            index_no_play = np.where(np.isnan(f[t+1]))[0]
+            teams_no_play = [i for i in index_no_play if i < len(all_teams)]
+
+            for i in teams_no_play:
+                f[t+1][i] = w[i] + b1 * f[t][i]
+                f[t+1][i + len(all_teams)] = w[i + len(all_teams)] + b2 * f[t][i + len(all_teams)]
+                # We dont update ll for these team since no opponent
+                # Eventually it will update since there needs to be certain matches a season
+            
         else:
             empty_list = np.empty(len(f[0]))
             empty_list[:] = np.nan
@@ -136,33 +174,33 @@ def ll_biv_poisson(params, data, schedule):
                 y = data.iloc[t][away]
 
                 # get previous lambda1 and lambda2
-                prev_alpha_home = f[t-1][home_index]
-                prev_alpha_away = f[t-1][away_index]
-                prev_beta_home = f[t-1][home_index + nr_teams]
-                prev_beta_away = f[t-1][away_index + nr_teams]
+                prev_alpha_home = f[t][home_index]
+                prev_alpha_away = f[t][away_index]
+                prev_beta_home = f[t][home_index + nr_teams]
+                prev_beta_away = f[t][away_index + nr_teams]
 
                 # Calc s_t
                 s = calc_s(x, y, prev_alpha_home, prev_alpha_away, prev_beta_home, prev_beta_away, lambda3, delta)
 
                 # Update f_t
-                f[t][home_index] = w[home_index] + b1 * f[t-1][home_index] + a1 * s[0] # Attack strength home
-                f[t][away_index] = w[away_index] + b1 * f[t-1][away_index] + a1 * s[1] # Attack strength away
-                f[t][home_index + nr_teams] = w[home_index + nr_teams] + b2 * f[t-1][home_index + nr_teams] + a2 * s[2] # Defense strength home
-                f[t][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t-1][away_index + nr_teams] + a2 * s[3] # Defense strength away
+                f[t+1][home_index] = w[home_index] + b1 * f[t][home_index] + a1 * s[0] # Attack strength home
+                f[t+1][away_index] = w[away_index] + b1 * f[t][away_index] + a1 * s[1] # Attack strength away
+                f[t+1][home_index + nr_teams] = w[home_index + nr_teams] + b2 * f[t][home_index + nr_teams] + a2 * s[2] # Defense strength home
+                f[t+1][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t][away_index + nr_teams] + a2 * s[3] # Defense strength away
                 # Updating sum
                 sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
                 # print(sum_1)
                 
             # Filling in f_t when team does not play
-            index_no_play = np.where(np.isnan(f[t]))[0]
+            index_no_play = np.where(np.isnan(f[t+1]))[0]
             teams_no_play = [i for i in index_no_play if i < len(all_teams)]
 
             for i in teams_no_play:
-                f[t][i] = w[i] + b1 * f[t-1][i]
-                f[t][i + len(all_teams)] = w[i + len(all_teams)] + b2 * f[t-1][i + len(all_teams)]
+                f[t+1][i] = w[i] + b1 * f[t][i]
+                f[t+1][i + len(all_teams)] = w[i + len(all_teams)] + b2 * f[t][i + len(all_teams)]
                 # We dont update ll for these team since no opponent
                 # Eventually it will update since there needs to be certain matches a season
-
+            # print(np.isnan(f[t+1]).any())
         # Updating ll
         ll += sum_1
 
@@ -201,8 +239,7 @@ def train_model_bp(data, schedule):
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
-    # print(len(initial_values))
-    # return
+
     result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead')
 
     print(result)
@@ -217,8 +254,15 @@ def train_model_bp(data, schedule):
     df_results.to_csv("BP_results.csv", index=False)
 
 # Read Data
-training_schedule = pd.read_csv("BP_data/train_schedule_BP.csv")
-training_data = pd.read_csv("BP_data/train_data_BP.csv")
+schedule = pd.read_csv("BP_data_NEW\schedule.csv")
+data = pd.read_csv("BP_data_NEW\panel_data.csv")
 
 # Train model
-train_model_bp(training_data, training_schedule)
+# Training model oin whole data set for ANN
+train_model_bp(data, schedule)
+
+# last round first 20 seasons is 751
+# Solution for new team in test data
+# Get training data unique teams
+# check if home , away is in this unique team
+# if not get set alpha of this team to average attack and defense
