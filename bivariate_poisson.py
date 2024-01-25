@@ -208,7 +208,7 @@ def ll_biv_poisson(params, data, schedule):
     print(ll)
     return -ll
 
-def train_model_bp(data, schedule):
+def train_model_bp(data, schedule, name_output):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
     a1_ini = 0.1
     a2_ini = 0.1
@@ -251,15 +251,18 @@ def train_model_bp(data, schedule):
                                "lambda3": [est_lambda3],
                                "delta": [est_delta],
                                "f": [est_f]})
-    df_results.to_csv("BP_results.csv", index=False)
+    df_results.to_csv(name_output, index=False)
 
 # Read Data
 schedule = pd.read_csv("BP_data_NEW\schedule.csv")
 data = pd.read_csv("BP_data_NEW\panel_data.csv")
 
 # Train model
-# Training model oin whole data set for ANN
-train_model_bp(data, schedule)
+# Training model on whole data set for ANN
+# train_model_bp(data, schedule, "BP_results_for_NN.csv")
+
+# Training model on first training set
+train_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_results_first")
 
 # last round first 20 seasons is 751
 # Solution for new team in test data
