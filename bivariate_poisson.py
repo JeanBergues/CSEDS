@@ -251,7 +251,7 @@ def train_model_bp(data, schedule):
                                "lambda3": [est_lambda3],
                                "delta": [est_delta],
                                "f": [est_f]})
-    df_results.to_csv("BP_results.csv", index=False)
+    df_results.to_csv("BP_results_for_NN.csv", index=False)
 
 # Read Data
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
