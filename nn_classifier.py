@@ -83,7 +83,7 @@ def main() -> None:
 
     # NN parameters
     hidden_layer_sizes = np.repeat(5, 2)
-    hidden_layer_sizes = [30, 20, 10]
+    hidden_layer_sizes = [5, 5, 5]
     columns_to_use = ['FTR', 'HomeTeamID', 'AwayTeamID','PrevHTR','PrevATR','PrevDR']
     # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
 
