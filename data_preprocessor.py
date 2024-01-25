@@ -138,7 +138,7 @@ def main() -> None:
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = 0
 
     # Add last match results
-    ADD_LAST_MATCH_RESULTS = False
+    ADD_LAST_MATCH_RESULTS = True
 
     if ADD_LAST_MATCH_RESULTS:
         N = data["DateNR"].size
