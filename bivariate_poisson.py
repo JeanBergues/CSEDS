@@ -240,7 +240,7 @@ def train_model_bp(data, schedule):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', maxiter = 25000)
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 25000})
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
@@ -254,8 +254,8 @@ def train_model_bp(data, schedule):
     df_results.to_csv("BP_results.csv", index=False)
 
 # Read Data
-schedule = pd.read_csv("BP_data_NEW\schedule.csv")
-data = pd.read_csv("BP_data_NEW\panel_data.csv")
+schedule = pd.read_csv("BP_data_NEW/schedule.csv")
+data = pd.read_csv("BP_data_NEW/panel_data.csv")
 
 # Train model
 # Training model oin whole data set for ANN
