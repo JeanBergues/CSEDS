@@ -277,7 +277,7 @@ def retrain_bp(data, schedule, ini):
                 index_new = order_new.index(team)
 
                 f_new[index_new] = np.mean(ini_f[:len(order_ini)]) # Attack
-                f_new[index_new + len(order_new)] = np.mean(ini_f[len(order_ini):]) # Defense
+                f_new[index_new + len(order_new)] = np.mean(ini_f[-len(order_ini):]) # Defense
 
 
         initial = [ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta]
@@ -292,6 +292,77 @@ def retrain_bp(data, schedule, ini):
         result = minimize(ll_biv_poisson, ini_f, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
     
     return result.x
+
+def calc_probas(home_index, away_index, nr_teams, params):
+    a1, a2, b1, b2, lambda3, delta, *f = params
+
+    proba_home_win = 0
+    proba_draw = 0
+    proba_away_win = 0
+    for x in range(26):
+        if x > 0:
+            for y in range(x):
+                # Calc proba home win
+                proba_home_win += pdf_bp(x, y, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
+
+                # Calc proba away win
+                proba_away_win += pdf_bp(y, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
+
+        # Calc proba draw
+        proba_draw += pdf_bp(x, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
+    
+    return proba_home_win, proba_draw, proba_away_win
+
+def one_step_ahead_forecast(data, schedule):
+    # Get first estimates
+    first_results = pd.read_csv("BP_results_second.csv")
+    a1 = first_results["a1"]
+    a2 = first_results["a2"]
+    b1 = first_results["b1"]
+    b2 = first_results["b2"]
+    lambda3 = first_results["lambda3"][0]
+    delta = first_results["delta"][0]
+    f = literal_eval(first_results["f"][0])
+
+    params = [a1, a2, b1, b2, lambda3, delta]
+    for i in range(len(f)):
+        params.append(f[i])
+
+    # Creating dataframe with results
+    proba_df = pd.DataFrame(np.nan, index=range(10000), columns=['HomeTeam', 'AwayTeam', 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
+
+    count = 0
+    # Get matches that need to be forecasted
+    for i in range(173, max(schedule["round"] + 1)):
+        round_matches = schedule[schedule['round'] == i]
+        train_schedule = schedule.head(i)
+        teams = sorted(train_schedule["HomeTeam"].unique().tolist())
+
+        for k in range(len(round_matches)):
+            home = round_matches.loc[k, "HomeTeam"]
+            away = round_matches.loc[k, "AwayTeam"]
+
+            home_index = teams.index(home)
+            away_index = teams.index(away)
+
+            proba_home_win, proba_draw, proba_away_win = calc_probas(home_index, away_index, len(teams), params)
+
+            # Update dataframe
+            proba_df.loc[count, "HomeTeam"] = home
+            proba_df.loc[count, "AwayTeam"] = away
+            proba_df.loc[count, "Proba_Home_win"] = proba_home_win
+            proba_df.loc[count, "Proba_Draw"] = proba_draw
+            proba_df.loc[count, "Proba_Away_win"] = proba_away_win
+            proba_df.loc[count, "round"] = home
+
+        # Retraining model
+        params = retrain_bp(data.head(i), train_schedule, params)
+    
+    proba_df.to_csv("One_step_ahead_forecasts.csv", index=False)
+    return 
+
+
+
 
 # Read Data
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
