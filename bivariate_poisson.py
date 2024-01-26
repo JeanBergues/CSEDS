@@ -86,7 +86,7 @@ def ll_biv_poisson(params, data, schedule):
     ll = 0
 
     # Get list of distinct teams
-    all_teams = schedule['HomeTeam'].unique().tolist()
+    all_teams = sorted(schedule['HomeTeam'].unique().tolist())
     nr_teams = len(all_teams)
     
     # Defining f_t, A, B
@@ -208,7 +208,7 @@ def ll_biv_poisson(params, data, schedule):
     print(ll)
     return -ll
 
-def train_model_bp(data, schedule, name_output):
+def initial_training_model_bp(data, schedule, name_output):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
     a1_ini = 0.1
     a2_ini = 0.1
@@ -218,7 +218,7 @@ def train_model_bp(data, schedule, name_output):
     delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
     f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
-    # df_ini = pd.read_csv("BP_results.csv")
+    # df_ini = pd.read_csv("BP_results_first.csv")
     # a1_ini = df_ini["a1"][0]
     # a2_ini = df_ini["a2"][0]
     # b1_ini = df_ini["b1"][0]
@@ -240,7 +240,7 @@ def train_model_bp(data, schedule, name_output):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 25000})
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 30000})
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
@@ -253,16 +253,57 @@ def train_model_bp(data, schedule, name_output):
                                "f": [est_f]})
     df_results.to_csv(name_output, index=False)
 
+def retrain_bp(data, schedule, ini):
+    ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta, *ini_f = ini
+
+    if 2*len(schedule["HomeTeam"].unique()) != len(ini):
+        # get the order of which element belongs to which team in f_t
+        order_ini = sorted(schedule[schedule["round"] < max(schedule['round']), "HomeTeam"].unique().tolist())
+
+        # get new order of f_t
+        order_new = sorted(schedule["HomeTeam"].unique().tolist())
+
+        f_new = [None for i in range(2*len(schedule["HomeTeam"].unique()))]
+        for team in order_new:
+            if team in order_ini:
+                # get index
+                index_ini = order_ini.index(team)
+                index_new = order_new.index(team)
+
+                f_new[index_new] = ini_f[index_ini] # Attack
+                f_new[index_new + len(order_new)] = ini_f[index_ini + len(order_ini)] # Defense
+
+            else:
+                index_new = order_new.index(team)
+
+                f_new[index_new] = np.mean(ini_f[:len(order_ini)]) # Attack
+                f_new[index_new + len(order_new)] = np.mean(ini_f[len(order_ini):]) # Defense
+
+
+        initial = [ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta]
+
+        for i in range(len(f_new)):
+            initial.append(f_new[i])
+        
+        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+        result = minimize(ll_biv_poisson, initial, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
+    else:
+        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+        result = minimize(ll_biv_poisson, ini_f, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
+    
+    return result.x
+
 # Read Data
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
 data = pd.read_csv("BP_data_NEW/panel_data.csv")
+print(schedule["HomeTeam"].unique().tolist())
 
 # Train model
 # Training model on whole data set for ANN
-# train_model_bp(data, schedule, "BP_results_for_NN.csv")
+# initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
 
 # Training model on first training set
-train_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_results_first")
+# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_results_second.csv")
 
 # last round first 20 seasons is 751
 # Solution for new team in test data
