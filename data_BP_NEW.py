@@ -38,8 +38,35 @@ def all_data():
     data.loc[data["HomeTeam"] == "Heracles ","HomeTeam"] = "Heracles"
     data.loc[data["HomeTeam"] == "Feyenoord ","HomeTeam"] = "Feyenoord"
 
+    data["season"] = np.nan
+    data.loc[data["round"] < 44, "season"] = 1
+    data.loc[(data["round"] < 89) & (data["round"]>43), "season"] = 2
+    data.loc[(data["round"] < 134) & (data["round"]>88), "season"] = 3
+    data.loc[(data["round"] < 175)& (data["round"]>133), "season"] = 4
+    data.loc[(data["round"] < 213) & (data["round"]>174), "season"] = 5
+    data.loc[(data["round"] < 251) & (data["round"]>212), "season"] = 6
+    data.loc[(data["round"] < 289) & (data["round"]>250), "season"] = 7
+    data.loc[(data["round"] < 324) & (data["round"]>288), "season"] = 8
+    data.loc[(data["round"] < 362) & (data["round"]>323), "season"] = 9
+    data.loc[(data["round"] < 396) & (data["round"]>361), "season"] = 10
+    data.loc[(data["round"] < 433) & (data["round"]>395), "season"] = 11
+    data.loc[(data["round"] < 469) & (data["round"]>432), "season"] = 12
+    data.loc[(data["round"] < 505) & (data["round"]>468), "season"] = 13
+    data.loc[(data["round"] < 539) & (data["round"]>504), "season"] = 14
+    data.loc[(data["round"] < 577) & (data["round"]>538), "season"] = 15
+    data.loc[(data["round"] < 612) & (data["round"]>576), "season"] = 16
+    data.loc[(data["round"] < 646) & (data["round"]>611), "season"] = 17
+    data.loc[(data["round"] < 680) & (data["round"]>644), "season"] = 18
+    data.loc[(data["round"] < 716) & (data["round"]>679), "season"] = 19
+    data.loc[(data["round"] < 752) & (data["round"]>715), "season"] = 20
+    data.loc[(data["round"] < 779) & (data["round"]>751), "season"] = 21
+    data.loc[(data["round"] < 818) & (data["round"]>778), "season"] = 22
+    data.loc[(data["round"] < 855) & (data["round"]>817), "season"] = 23
+    data.loc[(data["round"] < 893) & (data["round"]>854), "season"] = 24
+    data.loc[data["round"]>912, "season"] = 25
+
     data.reset_index()
-    data.to_csv("BP_data_NEW\schedule.csv", index=False)
+    data.to_csv("BP_data_NEW/schedule.csv", index=False)
 
     return
 
@@ -65,8 +92,7 @@ def create_panel_data():
             result_df.loc[round_num, home] = round_data.iloc[i]["FTHG"]
             result_df.loc[round_num, away] = round_data.iloc[i]["FTAG"]
     
-    result_df.to_csv("BP_data_NEW\panel_data.csv")
+    result_df.to_csv("BP_data_NEW/panel_data.csv")
 
 all_data()
 create_panel_data()
-
