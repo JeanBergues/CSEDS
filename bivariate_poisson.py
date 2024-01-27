@@ -520,6 +520,7 @@ def one_season_ahead_forecast(data, schedule):
         params = retrain_bp(data.head(i), train_schedule, params)
         print("done")
     
+    proba_df = proba_df.dropna()
     proba_df.to_csv("One_step_ahead_forecasts_2.csv", index=False)
     return 
 
