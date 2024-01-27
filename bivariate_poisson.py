@@ -489,28 +489,6 @@ def one_step_ahead_forecast(data, schedule):
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
 data = pd.read_csv("BP_data_NEW/panel_data.csv")
 
-# For fixing f order
-train_schedule = schedule[schedule["round"] < 752]
-est = pd.read_csv("BP_results_second.csv")
-f = literal_eval(est["f"][0])
-teams = train_schedule["HomeTeam"].unique().tolist()
-# Zip the teams and values together
-combined = zip(teams, f)
-# Sort the zipped pairs based on team names
-sorted_combined = sorted(combined, key=lambda x: x[0])
-# Extract the sorted values
-sorted_f = [pair[1] for pair in sorted_combined]
-# saving in csv
-df = pd.DataFrame({"a1": [est["a1"][0]],
-                   "a2": [est["a2"][0]],
-                    "b1": [est["b1"][0]],
-                    "b2": [est["b2"][0]],
-                    "lambda3": [est["lambda3"][0]],
-                    "delta": [est["delta"][0]],
-                    "f": [sorted_f]})
-df.to_csv("BP_results_second_fixed.csv", index=False)
-
-
 # Train model
 # Training model on whole data set for ANN
 # initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
