@@ -118,7 +118,7 @@ def main() -> None:
     
     # Train the neural network
     realization = training_data['FTR']
-    max_neurons = 7
+    max_neurons = 2
     options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
     options.extend([x for x in range(1, max_neurons+1)])
     best_option = [1, 1]
@@ -143,7 +143,8 @@ def main() -> None:
     gmodel = gsearch_model.fit(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1), training_data['FTR'])
 
     class_nn = gmodel.best_estimator_
-    print(gmodel.best_params_)
+    chosen_layers = gmodel.best_params_['hidden_layer_sizes']
+    print(f"Best layer structure: {chosen_layers}")
 
     # Predict the oos
     print(f"OUT OF SAMPLE PERFORMANCE")
@@ -177,6 +178,12 @@ def main() -> None:
     type_errors = output_type_errors(np.array(realization), prediction)
     print(type_errors)
 
+    if len(chosen_layers) == 1:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_0', 'wb') as file:
+            np.array(realization).dump(file)   
+    else:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}', 'wb') as file:
+            np.array(realization).dump(file)
 
     # prediction = np.zeros(N)
     # for i in range(N):
