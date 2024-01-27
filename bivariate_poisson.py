@@ -430,7 +430,6 @@ def calc_probas(home_index, away_index, nr_teams, params, f):
 
                 # Calc proba away win
                 proba_away_win += pdf_bp(y, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
-
         # Calc proba draw
         proba_draw += pdf_bp(x, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
     
@@ -452,7 +451,7 @@ def one_season_ahead_forecast(data, schedule):
         params.append(est_f[i])
 
     # Creating dataframe with results
-    proba_df = pd.DataFrame(None, index=range(10000), columns=['HomeTeam', 'AwayTeam', 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
+    proba_df = pd.DataFrame(None, index=range(10000), columns=['HomeTeam', 'AwayTeam', "FTHG", "FTAG", 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
 
     count = 0
     # Get matches that need to be forecasted
@@ -509,6 +508,8 @@ def one_season_ahead_forecast(data, schedule):
             # Update dataframe
             proba_df.loc[count, "HomeTeam"] = str(home)
             proba_df.loc[count, "AwayTeam"] = str(away)
+            proba_df.loc[count, "FTHG"] = season_matches.loc[k, "FTHG"]
+            proba_df.loc[count, "FTAG"] = season_matches.loc[k, "FTAG"]
             proba_df.loc[count, "Proba_Home_win"] = float(proba_home_win)
             proba_df.loc[count, "Proba_Draw"] = float(proba_draw)
             proba_df.loc[count, "Proba_Away_win"] = float(proba_away_win)
@@ -519,9 +520,36 @@ def one_season_ahead_forecast(data, schedule):
         params = retrain_bp(data.head(i), train_schedule, params)
         print("done")
     
-    proba_df.to_csv("One_step_ahead_forecasts.csv", index=False)
+    proba_df.to_csv("One_step_ahead_forecasts_2.csv", index=False)
     return 
 
+def attack_defense_NN(data, schedule, params):
+    f = get_f(data, schedule, params)
+    teams = sorted(schedule["HomeTeams"].unique().tolist())
+
+    schedule["HomeAttack"] = np.nan
+    schedule["HomeDefense"] = np.nan
+    schedule["AwayAttack"] = np.nan
+    schedule["AwayDefense"] = np.nan
+    schedule = schedule.reset_index()
+
+    for i in range(len(schedule)):
+        # Get match info
+        round = int(schedule.loc[i, "round"])
+        home = schedule.loc[i, "HomeTeam"]
+        away = schedule.loc[i, "AwayTeam"]
+
+        # Get index
+        home_index = teams.index(home)
+        away_index = teams.index(away)
+
+        # plug in values into dataset
+        schedule.loc[i, "HomeAttack"] = f[round][home_index]
+        schedule.loc[i, "HomeDefense"] = f[round][home_index + len(teams)]
+        schedule.loc[i, "AwayAttack"] = f[round][away_index]
+        schedule.loc[i, "AwayDefense"] = f[round][away_index + len(teams)]
+    
+    schedule.to_csv("schedule_for_NN.csv", index=False)
 
 # Read Data
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
@@ -536,6 +564,7 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 
 # One_season_ahead forecasts
 one_season_ahead_forecast(data, schedule)
+
 
 # last round first 20 seasons is 751
 # Solution for new team in test data
