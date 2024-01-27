@@ -63,7 +63,7 @@ def all_data():
     data.loc[(data["round"] < 818) & (data["round"]>778), "season"] = 22
     data.loc[(data["round"] < 855) & (data["round"]>817), "season"] = 23
     data.loc[(data["round"] < 893) & (data["round"]>854), "season"] = 24
-    data.loc[data["round"]>912, "season"] = 25
+    data.loc[data["round"]>892, "season"] = 25
 
     data.reset_index()
     data.to_csv("BP_data_NEW/schedule.csv", index=False)
