@@ -149,7 +149,7 @@ def main() -> None:
         class_nn = gmodel.best_estimator_
         chosen_layers = gmodel.best_params_['hidden_layer_sizes']
     else:
-        chosen_layers = (10, 5)
+        chosen_layers = (2, 8)
         class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', chosen_layers)
     
     print(f"Best layer structure: {chosen_layers}")
@@ -197,7 +197,6 @@ def main() -> None:
             np.array(prediction).dump(file)
 
     proba_predictions = class_nn.predict_proba(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
-    print(proba_predictions)
 
     results = pd.DataFrame()
     results['Outcome'] = realization
@@ -206,7 +205,7 @@ def main() -> None:
     results['ProbD'] = proba_predictions[:,1]
     results['ProbH'] = proba_predictions[:,2]
 
-    results.to_csv(f'predictions/df_nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}.csv')
+    results.to_csv(f'predictions/df_nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}.csv')
 
     # prediction = np.zeros(N)
     # for i in range(N):
