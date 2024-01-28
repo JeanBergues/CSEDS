@@ -422,7 +422,7 @@ def calc_probas(home_index, away_index, nr_teams, params, f):
     proba_home_win = 0
     proba_draw = 0
     proba_away_win = 0
-    for x in range(26):
+    for x in range(101):
         if x > 0:
             for y in range(x):
                 # Calc proba home win
@@ -521,7 +521,22 @@ def one_season_ahead_forecast(data, schedule):
         print("done")
     
     proba_df = proba_df.dropna()
-    proba_df.to_csv("BP_One_season_ahead_forecasts_2.csv", index=False)
+    proba_df = proba_df.reset_index()
+    proba_df["Prediction"] = None
+    count = 0
+    for i in range(len(proba_df)):
+        proba_home = proba_df.loc[i, "Proba_Home_win"]
+        proba_draw = proba_df.loc[i, "Proba_Draw"]
+        proba_away = proba_df.loc[i, "Proba_Away_win"]
+        
+        if proba_home > proba_draw and proba_home > proba_away:
+            proba_df.loc[i ,"Prediction"] = "Home"
+        elif proba_draw > proba_home and proba_draw > proba_away:
+            proba_df.loc[i ,"Prediction"] = "Draw"
+        elif proba_away > proba_home and proba_away > proba_draw:
+            proba_df.loc[i ,"Prediction"] = "Away"
+
+    proba_df.to_csv("BP_One_season_ahead_forecasts_NEW.csv", index=False)
     return 
 
 def attack_defense_NN(data, schedule, params):
@@ -564,20 +579,20 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 # initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_test.csv")
 
 # One_season_ahead forecasts
-# one_season_ahead_forecast(data, schedule)
+one_season_ahead_forecast(data, schedule)
 
 # For NN
-est = pd.read_csv("BP_results_for_NN_Latest.csv")
-a1 = est["a1"][0]
-a2 = est["a2"][0]
-b1 = est["b1"][0]
-b2 = est["b2"][0]
-lambda3 = est["lambda3"][0]
-delta = est["delta"][0]
-f = literal_eval(est["f"][0])
+# est = pd.read_csv("BP_results_for_NN_Latest.csv")
+# a1 = est["a1"][0]
+# a2 = est["a2"][0]
+# b1 = est["b1"][0]
+# b2 = est["b2"][0]
+# lambda3 = est["lambda3"][0]
+# delta = est["delta"][0]
+# f = literal_eval(est["f"][0])
 
-params = [a1, a2, b1, b2, lambda3, delta]
-for i in range(len(f)):
-    params.append(f[i])
+# params = [a1, a2, b1, b2, lambda3, delta]
+# for i in range(len(f)):
+#     params.append(f[i])
 
-attack_defense_NN(data, schedule, params)
+# attack_defense_NN(data, schedule, params)
