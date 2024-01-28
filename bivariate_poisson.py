@@ -526,7 +526,7 @@ def one_season_ahead_forecast(data, schedule):
 
 def attack_defense_NN(data, schedule, params):
     f = get_f(data, schedule, params)
-    teams = sorted(schedule["HomeTeams"].unique().tolist())
+    teams = sorted(schedule["HomeTeam"].unique().tolist())
 
     schedule["HomeAttack"] = np.nan
     schedule["HomeDefense"] = np.nan
@@ -564,11 +564,20 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 # initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_test.csv")
 
 # One_season_ahead forecasts
-one_season_ahead_forecast(data, schedule)
+# one_season_ahead_forecast(data, schedule)
 
+# For NN
+est = pd.read_csv("BP_results_for_NN_Latest.csv")
+a1 = est["a1"][0]
+a2 = est["a2"][0]
+b1 = est["b1"][0]
+b2 = est["b2"][0]
+lambda3 = est["lambda3"][0]
+delta = est["delta"][0]
+f = literal_eval(est["f"][0])
 
-# last round first 20 seasons is 751
-# Solution for new team in test data
-# Get training data unique teams
-# check if home , away is in this unique team
-# if not get set alpha of this team to average attack and defense
+params = [a1, a2, b1, b2, lambda3, delta]
+for i in range(len(f)):
+    params.append(f[i])
+
+attack_defense_NN(data, schedule, params)
