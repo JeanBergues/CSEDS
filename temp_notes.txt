@@ -101,3 +101,25 @@ MSE: 6124
 [[ 966    0  713]
  [ 448    0  896]
  [ 482    0 2309]]
+
+ MET MAX 15 NEURONS
+
+ Best layer structure: (2, 8)
+OUT OF SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([406, 897], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([424, 298, 581], dtype=int64))
+Succes ratio: 0.544%
+MSE: 1482
+[[221   0 203]
+ [ 92   0 206]
+ [ 93   0 488]]
+IN SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([1896, 3918], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1679, 1344, 2791], dtype=int64))
+Succes ratio: 0.563%
+MSE: 6124
+[[ 966    0  713]
+ [ 448    0  896]
+ [ 482    0 2309]]
+
+ 

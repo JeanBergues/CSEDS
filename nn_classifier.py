@@ -120,7 +120,7 @@ def main() -> None:
     
     # Train the neural network
     realization = training_data['FTR']
-    max_neurons = 8
+    max_neurons = 15
     options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
     options.extend([x for x in range(1, max_neurons+1)])
     best_option = [1, 1]
