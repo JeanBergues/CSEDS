@@ -3,6 +3,7 @@ import math
 import pandas as pd
 from scipy.optimize import minimize
 from ast import literal_eval
+import bisect
 
 def create_A_B_matrix(a, b, N):
     # Creates first block
@@ -204,28 +205,28 @@ def ll_biv_poisson(params, data, schedule):
         # Updating ll
         ll += sum_1
 
-    print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
-    print(ll)
+    # print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
+    # print(ll)
     return -ll
 
 def initial_training_model_bp(data, schedule, name_output):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
-    a1_ini = 0.1
-    a2_ini = 0.1
-    b1_ini = 0.1
-    b2_ini = 0.1
-    lambda3_ini = (np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
-    delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
-    f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
+    # a1_ini = 0.1
+    # a2_ini = 0.1
+    # b1_ini = 0.1
+    # b2_ini = 0.1
+    # lambda3_ini = (np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
+    # delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
+    # f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
-    # df_ini = pd.read_csv("BP_results_first.csv")
-    # a1_ini = df_ini["a1"][0]
-    # a2_ini = df_ini["a2"][0]
-    # b1_ini = df_ini["b1"][0]
-    # b2_ini = df_ini["b2"][0]
-    # lambda3_ini = df_ini["lambda3"][0]
-    # delta_ini = df_ini["delta"][0]
-    # f_ini = literal_eval(df_ini["f"][0])
+    df_ini = pd.read_csv("BP_results_second_fixed.csv")
+    a1_ini = df_ini["a1"][0]
+    a2_ini = df_ini["a2"][0]
+    b1_ini = df_ini["b1"][0]
+    b2_ini = df_ini["b2"][0]
+    lambda3_ini = df_ini["lambda3"][0]
+    delta_ini = df_ini["delta"][0]
+    f_ini = literal_eval(df_ini["f"][0])
 
     initial_values = []
     initial_values.append(a1_ini)
@@ -280,7 +281,7 @@ def get_f(data, schedule, params):
             schedule_round = schedule[schedule['round'] == t]
 
             # Create w
-            B_all_teams = create_A_B_matrix(b1,b2, nr_teams)
+            B_all_teams = create_A_B_matrix(b1, b2, nr_teams)
             w = np.multiply(f[t], (np.ones(len(f[t])) - np.diagonal(B_all_teams)))
 
             # Create empty list for f_t+1
@@ -376,9 +377,9 @@ def get_f(data, schedule, params):
 def retrain_bp(data, schedule, ini):
     ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta, *ini_f = ini
 
-    if 2*len(schedule["HomeTeam"].unique()) != len(ini):
+    if 2*len(schedule["HomeTeam"].unique().tolist()) != len(ini):
         # get the order of which element belongs to which team in f_t
-        order_ini = sorted(schedule[schedule["round"] < max(schedule['round']), "HomeTeam"].unique().tolist())
+        order_ini = sorted(schedule.loc[schedule["round"] < max(schedule['round']), "HomeTeam"].unique().tolist())
 
         # get new order of f_t
         order_new = sorted(schedule["HomeTeam"].unique().tolist())
@@ -401,19 +402,21 @@ def retrain_bp(data, schedule, ini):
 
 
         initial = [ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta]
-
+        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
         for i in range(len(f_new)):
             initial.append(f_new[i])
+            bounds.append((-2,2))
         
-        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
         result = minimize(ll_biv_poisson, initial, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
     else:
         bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+        for i in range(len(ini_f)):
+            bounds.append((-2,2))
         result = minimize(ll_biv_poisson, ini_f, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
     
     return result.x
 
-def calc_probas(home_index, away_index, nr_teams, params):
+def calc_probas(home_index, away_index, nr_teams, params, f):
     a1, a2, b1, b2, lambda3, delta, *f_0 = params
 
     proba_home_win = 0
@@ -427,63 +430,127 @@ def calc_probas(home_index, away_index, nr_teams, params):
 
                 # Calc proba away win
                 proba_away_win += pdf_bp(y, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
-
         # Calc proba draw
         proba_draw += pdf_bp(x, x, f[home_index], f[away_index], f[home_index + nr_teams], f[away_index + nr_teams], lambda3, delta)
     
     return proba_home_win, proba_draw, proba_away_win
 
-def one_step_ahead_forecast(data, schedule):
+def one_season_ahead_forecast(data, schedule):
     # Get first estimates
-    first_results = pd.read_csv("BP_results_second.csv")
-    a1 = first_results["a1"]
-    a2 = first_results["a2"]
-    b1 = first_results["b1"]
-    b2 = first_results["b2"]
-    lambda3 = first_results["lambda3"][0]
-    delta = first_results["delta"][0]
-    f = literal_eval(first_results["f"][0])
+    first_results = pd.read_csv("BP_final_result_first_training.csv")
+    est_a1 = first_results["a1"][0]
+    est_a2 = first_results["a2"][0]
+    est_b1 = first_results["b1"][0]
+    est_b2 = first_results["b2"][0]
+    est_lambda3 = first_results["lambda3"][0]
+    est_delta = first_results["delta"][0]
+    est_f = literal_eval(first_results["f"][0])
 
-    params = [a1, a2, b1, b2, lambda3, delta]
-    for i in range(len(f)):
-        params.append(f[i])
+    params = [est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta]
+    for i in range(len(est_f)):
+        params.append(est_f[i])
 
     # Creating dataframe with results
-    proba_df = pd.DataFrame(np.nan, index=range(10000), columns=['HomeTeam', 'AwayTeam', 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
+    proba_df = pd.DataFrame(None, index=range(10000), columns=['HomeTeam', 'AwayTeam', "FTHG", "FTAG", 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
 
     count = 0
     # Get matches that need to be forecasted
-    for i in range(173, max(schedule["round"] + 1)):
-        round_matches = schedule[schedule['round'] == i]
-        train_schedule = schedule.head(i)
-        teams = sorted(train_schedule["HomeTeam"].unique().tolist())
+    for i in range(21, int(max(schedule["season"])) + 1):
+        # Get estimates
+        est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = params
 
-        for k in range(len(round_matches)):
-            home = round_matches.loc[k, "HomeTeam"]
-            away = round_matches.loc[k, "AwayTeam"]
+        # Get test and training data
+        season_matches = schedule[schedule['season'] == i]
+        train_schedule = schedule[schedule["season"] < i]
+        teams_train = sorted(train_schedule["HomeTeam"].unique().tolist())
 
-            home_index = teams.index(home)
-            away_index = teams.index(away)
+        test_schedule = schedule[schedule["season"] <= i]
+        teams_test = sorted(test_schedule["HomeTeam"].unique().tolist())
+        max_round_test = max(test_schedule["round"])
+        test_data = data.head(int(max_round_test+1))
 
-            f = get_f(test_data, test_schedule, params)
+        # look if new team
+        if len(teams_train) != len(teams_test):
+            # Get the new team
+            new_team = list(set(teams_test)-set(teams_train))[0]
 
-            proba_home_win, proba_draw, proba_away_win = calc_probas(home_index, away_index, len(teams), params)
+            new_team_attack = np.mean(est_f[:len(teams_train)])    
+            new_team_defense = np.mean(est_f[-len(teams_train):])     
+
+            # Calculate the insertion index for the new team's attack and defense values
+            insertion_index_attack = bisect.bisect(teams_train, new_team)  # Insert in sorted order
+            insertion_index_defense = insertion_index_attack + len(teams_train)+1
+
+            # Insert the new team's attack and defense values into f
+            est_f.insert(insertion_index_attack, new_team_attack)
+            est_f.insert(insertion_index_defense, new_team_defense)
+
+            params = [est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta]
+            for i in range(len(est_f)):
+                params.append(est_f[i])
+
+        # Calculate f_t
+        f = get_f(test_data, test_schedule, params)
+
+        season_matches = season_matches.reset_index()
+        # Calculate the proba of each match
+        for k in range(len(season_matches)):
+            home = season_matches.loc[k, "HomeTeam"]
+            away = season_matches.loc[k, "AwayTeam"]
+
+            home_index = teams_test.index(home)
+            away_index = teams_test.index(away)
+
+            f_t = f[int(season_matches.loc[k, "round"])]
+
+            proba_home_win, proba_draw, proba_away_win = calc_probas(home_index, away_index, len(teams_test), params, f_t)
 
             # Update dataframe
-            proba_df.loc[count, "HomeTeam"] = home
-            proba_df.loc[count, "AwayTeam"] = away
-            proba_df.loc[count, "Proba_Home_win"] = proba_home_win
-            proba_df.loc[count, "Proba_Draw"] = proba_draw
-            proba_df.loc[count, "Proba_Away_win"] = proba_away_win
-            proba_df.loc[count, "round"] = home
+            proba_df.loc[count, "HomeTeam"] = str(home)
+            proba_df.loc[count, "AwayTeam"] = str(away)
+            proba_df.loc[count, "FTHG"] = season_matches.loc[k, "FTHG"]
+            proba_df.loc[count, "FTAG"] = season_matches.loc[k, "FTAG"]
+            proba_df.loc[count, "Proba_Home_win"] = float(proba_home_win)
+            proba_df.loc[count, "Proba_Draw"] = float(proba_draw)
+            proba_df.loc[count, "Proba_Away_win"] = float(proba_away_win)
+            proba_df.loc[count, "round"] = season_matches.loc[k, "round"]
             count += 1
 
         # Retraining model
         params = retrain_bp(data.head(i), train_schedule, params)
+        print("done")
     
-    proba_df.to_csv("One_step_ahead_forecasts.csv", index=False)
+    proba_df = proba_df.dropna()
+    proba_df.to_csv("One_step_ahead_forecasts_2.csv", index=False)
     return 
 
+def attack_defense_NN(data, schedule, params):
+    f = get_f(data, schedule, params)
+    teams = sorted(schedule["HomeTeams"].unique().tolist())
+
+    schedule["HomeAttack"] = np.nan
+    schedule["HomeDefense"] = np.nan
+    schedule["AwayAttack"] = np.nan
+    schedule["AwayDefense"] = np.nan
+    schedule = schedule.reset_index()
+
+    for i in range(len(schedule)):
+        # Get match info
+        round = int(schedule.loc[i, "round"])
+        home = schedule.loc[i, "HomeTeam"]
+        away = schedule.loc[i, "AwayTeam"]
+
+        # Get index
+        home_index = teams.index(home)
+        away_index = teams.index(away)
+
+        # plug in values into dataset
+        schedule.loc[i, "HomeAttack"] = f[round][home_index]
+        schedule.loc[i, "HomeDefense"] = f[round][home_index + len(teams)]
+        schedule.loc[i, "AwayAttack"] = f[round][away_index]
+        schedule.loc[i, "AwayDefense"] = f[round][away_index + len(teams)]
+    
+    schedule.to_csv("schedule_for_NN.csv", index=False)
 
 # Read Data
 schedule = pd.read_csv("BP_data_NEW/schedule.csv")
@@ -494,7 +561,11 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 # initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
 
 # Training model on first training set
-# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_results_second.csv")
+# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_test.csv")
+
+# One_season_ahead forecasts
+one_season_ahead_forecast(data, schedule)
+
 
 # last round first 20 seasons is 751
 # Solution for new team in test data

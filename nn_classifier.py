@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import sklearn.neural_network as nn
+import sklearn.preprocessing as prep
+import sklearn.model_selection as modsel
+import sklearn.metrics as met
+import itertools
 from datetime import datetime as dt
 
 def train_neural_network_classifier(data: pd.DataFrame, y_name: str, hidden_layer_sizes):
@@ -55,15 +59,15 @@ def output_type_errors(realizations, forecast):
     errors = np.zeros(9, dtype=np.int16)
     process_count = 0
     for r, f in zip(realizations, forecast):
-        if r == -1: # Realized loss
+        if r == 0: # Realized loss
             process_count += 1
-            errors[1 + f] = errors[1 + f] + 1
-        elif r == 0:# Realized draw
+            errors[0 + f] = errors[0 + f] + 1
+        elif r == 1:# Realized draw
             process_count += 1
-            errors[4 + f] = errors[4 + f] + 1
-        elif r == 1:# Realized win
+            errors[3 + f] = errors[3 + f] + 1
+        elif r == 2:# Realized win
             process_count += 1
-            errors[7 + f] = errors[7 + f] + 1
+            errors[6 + f] = errors[6 + f] + 1
 
     return errors.reshape(3, 3)
 
@@ -71,9 +75,10 @@ def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
     data = pd.read_csv('processed_data.csv')
+    data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
 
     # Remap FTR
-    ftr_mapping = {'A': -1, 'D': 0, 'H': 1}
+    ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
     data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
 
     # Rescale categorials
@@ -81,7 +86,7 @@ def main() -> None:
     # data['HomeTeamID'] = data['HomeTeamID'].apply(lambda x: x/max_team)
     # data['AwayTeamID'] = data['AwayTeamID'].apply(lambda x: x/max_team)
 
-    # data = pd.get_dummies(data=data, columns=['HomeTeamID', 'AwayTeamID'])
+    data = pd.get_dummies(data=data, columns=['HomeTeamID', 'AwayTeamID'])
     # print(o_data)
 
     # Rescale season results
@@ -93,7 +98,6 @@ def main() -> None:
     data['AwayPrevSeasonPoints'] = data['AwayPrevSeasonPoints'].apply(lambda x: x/max_points)
 
     # NN parameters
-    hidden_layer_sizes = [40, 20]
     columns_to_not_use = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'DateNR', 'Season', 'ScoreDiff']
     # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
 
@@ -108,11 +112,58 @@ def main() -> None:
     # max_time = data['DateNR'].max()
     # data['DateNR'] = data['DateNR'].apply(lambda x: x/max_time)
     # print(data)
+
+
+    print(training_data.drop(columns_to_not_use, axis=1))
     
     # Train the neural network
-    class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', hidden_layer_sizes)
+    realization = training_data['FTR']
+    max_neurons = 2
+    options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
+    options.extend([x for x in range(1, max_neurons+1)])
+    best_option = [1, 1]
+    best_criterion = np.inf
+
+    # for option in options:
+    #     print(f"Testing {option}")
+    #     class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', option)
+    #     prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    #     criterion = met.mean_squared_error(realization, prediction)
+    #     print(f"MSE of model: {criterion}")
+
+    #     if criterion < best_criterion:
+    #         print("Update!")
+    #         best_criterion = criterion
+    #         best_option = [option[0], option[1]]
+
+    #     print(f"Best option: {best_option}")
+    #     print(f"With MSE: {best_criterion}")
+
+    gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [500]}, n_jobs=-1, refit=True, verbose=3)
+    gmodel = gsearch_model.fit(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1), training_data['FTR'])
+
+    class_nn = gmodel.best_estimator_
+    chosen_layers = gmodel.best_params_['hidden_layer_sizes']
+    print(f"Best layer structure: {chosen_layers}")
 
     # Predict the oos
+    print(f"OUT OF SAMPLE PERFORMANCE")
+    prediction = class_nn.predict(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    realization = oos_data['FTR']
+
+    # Analyze the results
+    print(np.unique(prediction, return_counts=True))
+    print(np.unique(realization, return_counts=True))
+
+    succes_ratio = calculate_succes_ratio(np.array(realization), prediction)
+    print(f"Succes ratio: {succes_ratio:.3f}%")
+    MSE = np.sum(np.square(realization - prediction))
+    print(f"MSE: {MSE:d}")
+    type_errors = output_type_errors(np.array(realization), prediction)
+    print(type_errors)
+
+    # In-sample performance
+    print(f"IN SAMPLE PERFORMANCE")
     prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
     realization = training_data['FTR']
 
@@ -127,6 +178,12 @@ def main() -> None:
     type_errors = output_type_errors(np.array(realization), prediction)
     print(type_errors)
 
+    if len(chosen_layers) == 1:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_0', 'wb') as file:
+            np.array(realization).dump(file)   
+    else:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}', 'wb') as file:
+            np.array(realization).dump(file)
 
     # prediction = np.zeros(N)
     # for i in range(N):

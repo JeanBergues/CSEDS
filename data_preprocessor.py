@@ -12,7 +12,6 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 
-
 def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
     # print(f"Now reading file {file_name}")
     df = pd.read_csv(file_name, sep=',', usecols=columns)
