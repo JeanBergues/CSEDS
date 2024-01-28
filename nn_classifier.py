@@ -74,7 +74,7 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
-    INCLUDE_ATTACK_DEFENSE = False
+    INCLUDE_ATTACK_DEFENSE = True
     data = pd.read_csv('schedule_for_NN.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
     print(data.columns)
