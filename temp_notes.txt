@@ -38,3 +38,66 @@ MSE: 7175
 [[   0    0 1491]
  [   0    0 1211]
  [   0    0 2500]]
+
+
+ NU MET MAX 10 NEURONS
+
+ Best layer structure: (6, 6)
+OUT OF SAMPLE PERFORMANCE
+(array([2], dtype=int64), array([1915], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([612, 431, 872], dtype=int64))
+Succes ratio: 0.455%
+MSE: 2879
+[[  0   0 612]
+ [  0   0 431]
+ [  0   0 872]]
+IN SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([  78, 5124], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1491, 1211, 2500], dtype=int64))
+Succes ratio: 0.488%
+MSE: 7019
+[[  50    0 1441]
+ [  17    0 1194]
+ [  11    0 2489]]
+
+
+ NU MET GEFIXTE DATASET (ATTACK EN DEFENSE)
+
+ Best layer structure: (6, 7)
+OUT OF SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([ 243, 1060], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([424, 298, 581], dtype=int64))
+Succes ratio: 0.540%
+MSE: 1506
+[[157   0 267]
+ [ 51   0 247]
+ [ 35   0 546]]
+IN SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([1304, 4510], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1679, 1344, 2791], dtype=int64))
+Succes ratio: 0.551%
+MSE: 6420
+[[ 704    0  975]
+ [ 306    0 1038]
+ [ 294    0 2497]]
+
+
+ NU GEFIXTE DATASET ZONDER ATTACK EN DEFENSE
+
+ Best layer structure: (2, 8)
+OUT OF SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([406, 897], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([424, 298, 581], dtype=int64))
+Succes ratio: 0.544%
+MSE: 1482
+[[221   0 203]
+ [ 92   0 206]
+ [ 93   0 488]]
+IN SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([1896, 3918], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1679, 1344, 2791], dtype=int64))
+Succes ratio: 0.563%
+MSE: 6124
+[[ 966    0  713]
+ [ 448    0  896]
+ [ 482    0 2309]]

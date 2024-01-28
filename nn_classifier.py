@@ -74,8 +74,10 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
-    data = pd.read_csv('schedule_for_NN.csv')
+    INCLUDE_ATTACK_DEFENSE = False
+    data = pd.read_csv('schedule_for_NN.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
+    print(data.columns)
 
     # Remap FTR
     ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
@@ -102,8 +104,8 @@ def main() -> None:
     # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
 
     # Recreate data samples from Koopman
-    training_data = data[(data.Season >= 1) & (data.Season < 18)]
-    oos_data = data[data.Season >= 18]
+    training_data = data[(data.Season >= 1) & (data.Season < 20)]
+    oos_data = data[data.Season >= 20]
 
     # oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
     # oos_data = data[data['DateNR'] < oss_data_cutoff]
@@ -118,7 +120,7 @@ def main() -> None:
     
     # Train the neural network
     realization = training_data['FTR']
-    max_neurons = 5
+    max_neurons = 8
     options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
     options.extend([x for x in range(1, max_neurons+1)])
     best_option = [1, 1]
@@ -179,10 +181,10 @@ def main() -> None:
     print(type_errors)
 
     if len(chosen_layers) == 1:
-        with open(f'predictions/nn_class_{chosen_layers[0]}_0', 'wb') as file:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
             np.array(realization).dump(file)   
     else:
-        with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}', 'wb') as file:
+        with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
             np.array(realization).dump(file)
 
     # prediction = np.zeros(N)
