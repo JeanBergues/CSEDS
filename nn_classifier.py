@@ -74,7 +74,7 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
-    INCLUDE_ATTACK_DEFENSE = True
+    INCLUDE_ATTACK_DEFENSE = False
     data = pd.read_csv('schedule_for_NN.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
     print(data.columns)
@@ -100,7 +100,7 @@ def main() -> None:
     data['AwayPrevSeasonPoints'] = data['AwayPrevSeasonPoints'].apply(lambda x: x/max_points)
 
     # NN parameters
-    columns_to_not_use = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'DateNR', 'Season', 'ScoreDiff']
+    columns_to_not_use = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'DateNR', 'Season', 'ScoreDiff', 'PrevHTR','PrevATR','PrevDR']
     # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
 
     # Recreate data samples from Koopman
@@ -120,49 +120,41 @@ def main() -> None:
     
     # Train the neural network
     realization = training_data['FTR']
-    max_neurons = 15
-    options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
-    options.extend([x for x in range(1, max_neurons+1)])
-    best_option = [1, 1]
-    best_criterion = np.inf
+    APPLY_GRID_SEARCH = False
+    if APPLY_GRID_SEARCH:
+        max_neurons = 8
+        options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
+        options.extend([x for x in range(1, max_neurons+1)])
+        best_option = [1, 1]
+        best_criterion = np.inf
 
-    # for option in options:
-    #     print(f"Testing {option}")
-    #     class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', option)
-    #     prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
-    #     criterion = met.mean_squared_error(realization, prediction)
-    #     print(f"MSE of model: {criterion}")
+        # for option in options:
+        #     print(f"Testing {option}")
+        #     class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', option)
+        #     prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+        #     criterion = met.mean_squared_error(realization, prediction)
+        #     print(f"MSE of model: {criterion}")
 
-    #     if criterion < best_criterion:
-    #         print("Update!")
-    #         best_criterion = criterion
-    #         best_option = [option[0], option[1]]
+        #     if criterion < best_criterion:
+        #         print("Update!")
+        #         best_criterion = criterion
+        #         best_option = [option[0], option[1]]
 
-    #     print(f"Best option: {best_option}")
-    #     print(f"With MSE: {best_criterion}")
+        #     print(f"Best option: {best_option}")
+        #     print(f"With MSE: {best_criterion}")
 
-    gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [500]}, n_jobs=-1, refit=True, verbose=3)
-    gmodel = gsearch_model.fit(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1), training_data['FTR'])
+        gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [500]}, n_jobs=-1, refit=True, verbose=3)
+        gmodel = gsearch_model.fit(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1), training_data['FTR'])
 
-    class_nn = gmodel.best_estimator_
-    chosen_layers = gmodel.best_params_['hidden_layer_sizes']
+        class_nn = gmodel.best_estimator_
+        chosen_layers = gmodel.best_params_['hidden_layer_sizes']
+    else:
+        chosen_layers = (10, 5)
+        class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', chosen_layers)
+    
     print(f"Best layer structure: {chosen_layers}")
 
-    # Predict the oos
-    print(f"OUT OF SAMPLE PERFORMANCE")
-    prediction = class_nn.predict(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
-    realization = oos_data['FTR']
-
-    # Analyze the results
-    print(np.unique(prediction, return_counts=True))
-    print(np.unique(realization, return_counts=True))
-
-    succes_ratio = calculate_succes_ratio(np.array(realization), prediction)
-    print(f"Succes ratio: {succes_ratio:.3f}%")
-    MSE = np.sum(np.square(realization - prediction))
-    print(f"MSE: {MSE:d}")
-    type_errors = output_type_errors(np.array(realization), prediction)
-    print(type_errors)
+    
 
     # In-sample performance
     print(f"IN SAMPLE PERFORMANCE")
@@ -180,12 +172,41 @@ def main() -> None:
     type_errors = output_type_errors(np.array(realization), prediction)
     print(type_errors)
 
+    # Predict the oos
+    print(f"OUT OF SAMPLE PERFORMANCE")
+    prediction = class_nn.predict(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    realization = oos_data['FTR']
+
+    # Analyze the results
+    print(np.unique(prediction, return_counts=True))
+    print(np.unique(realization, return_counts=True))
+
+    succes_ratio = calculate_succes_ratio(np.array(realization), prediction)
+    print(f"Succes ratio: {succes_ratio:.3f}%")
+    MSE = np.sum(np.square(realization - prediction))
+    print(f"MSE: {MSE:d}")
+    type_errors = output_type_errors(np.array(realization), prediction)
+    print(type_errors)
+
+
     if len(chosen_layers) == 1:
         with open(f'predictions/nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
-            np.array(realization).dump(file)   
+            np.array(prediction).dump(file)   
     else:
         with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
-            np.array(realization).dump(file)
+            np.array(prediction).dump(file)
+
+    proba_predictions = class_nn.predict_proba(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    print(proba_predictions)
+
+    results = pd.DataFrame()
+    results['Outcome'] = realization
+    results['Prediction'] = prediction
+    results['ProbA'] = proba_predictions[:,0]
+    results['ProbD'] = proba_predictions[:,1]
+    results['ProbH'] = proba_predictions[:,2]
+
+    results.to_csv(f'predictions/df_nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}.csv')
 
     # prediction = np.zeros(N)
     # for i in range(N):
