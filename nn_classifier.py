@@ -74,7 +74,7 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
-    data = pd.read_csv('processed_data.csv')
+    data = pd.read_csv('schedule_for_NN.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
 
     # Remap FTR
@@ -118,7 +118,7 @@ def main() -> None:
     
     # Train the neural network
     realization = training_data['FTR']
-    max_neurons = 2
+    max_neurons = 5
     options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
     options.extend([x for x in range(1, max_neurons+1)])
     best_option = [1, 1]

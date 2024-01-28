@@ -1,0 +1,40 @@
+OUTPUT FOR NO ATTACK AND DEFENSE
+
+Best layer structure: (2, 1)
+OUT OF SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([ 674, 1241], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([612, 431, 872], dtype=int64))
+Succes ratio: 0.537%
+MSE: 2255
+[[340   0 272]
+ [150   0 281]
+ [184   0 688]]
+IN SAMPLE PERFORMANCE
+(array([0, 2], dtype=int64), array([1694, 3508], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1491, 1211, 2500], dtype=int64))
+Succes ratio: 0.566%
+MSE: 5407
+[[ 860    0  631]
+ [ 416    0  795]
+ [ 418    0 2082]]
+
+
+ OUTPUT WITH ATTACK AND DEFENSE
+
+ Best layer structure: (3, 3)
+OUT OF SAMPLE PERFORMANCE
+(array([2], dtype=int64), array([1915], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([612, 431, 872], dtype=int64))
+Succes ratio: 0.455%
+MSE: 2879
+[[  0   0 612]
+ [  0   0 431]
+ [  0   0 872]]
+IN SAMPLE PERFORMANCE
+(array([2], dtype=int64), array([5202], dtype=int64))
+(array([0, 1, 2], dtype=int64), array([1491, 1211, 2500], dtype=int64))
+Succes ratio: 0.481%
+MSE: 7175
+[[   0    0 1491]
+ [   0    0 1211]
+ [   0    0 2500]]
