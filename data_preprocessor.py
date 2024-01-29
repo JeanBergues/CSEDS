@@ -87,13 +87,28 @@ def main() -> None:
     # Strip leading and trailing whitespace out of club names to prevent duplicates
     data[["HomeTeam", "AwayTeam"]] = data[["HomeTeam", "AwayTeam"]].apply(lambda x: x.str.strip())
 
+    # Factorize HomeTeam and apply the same mapping to AwayTeam
+    data['HomeTeamID'], team_mapping = pd.factorize(data['HomeTeam'])
+    data['AwayTeamID'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
+
+    # Include the round
+    for t in range(25):
+        r = -1
+        last_seen_week = 60
+        season_data = data[data['Season'] == t]
+
+        for _, row in season_data.iterrows():
+            row_week = datetime.fromordinal(row['DateNR']).isocalendar().week
+            if row_week != last_seen_week:
+                r += 1
+                last_seen_week = row_week
+            data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'RoundNO'] = r
+
     # Normalize ordinal dates to cut down on numerical issues
     starting_ordinal_date = data["DateNR"].min()
     data["DateNR"] = data["DateNR"].apply(lambda x: x - starting_ordinal_date)
 
-    # Factorize HomeTeam and apply the same mapping to AwayTeam
-    data['HomeTeamID'], team_mapping = pd.factorize(data['HomeTeam'])
-    data['AwayTeamID'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
+    
 
     # Add a score-difference column
     data['ScoreDiff'] = data['FTHG'] - data['FTAG']
@@ -180,7 +195,7 @@ def main() -> None:
         data['PrevATR'] = prev_at_results
         data['PrevDR'] = prev_duel_results
 
-    ADD_ROUNDS = True
+    ADD_ROUNDS = False
 
     if ADD_ROUNDS:
         count = 0
