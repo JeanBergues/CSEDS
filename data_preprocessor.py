@@ -77,6 +77,12 @@ def main() -> None:
     
     # Read in the data
     data = read_and_filter_data(country, selected_columns)
+
+    # Combine teams with name-change
+    data.loc[data["AwayTeam"] == "Roda JC","AwayTeam"] = "Roda"
+    data.loc[data["AwayTeam"] == "Sparta Rotterdam","AwayTeam"] = "Sparta"
+    data.loc[data["HomeTeam"] == "Roda JC","HomeTeam"] = "Roda"
+    data.loc[data["HomeTeam"] == "Sparta Rotterdam","HomeTeam"] = "Sparta"
     
     # Strip leading and trailing whitespace out of club names to prevent duplicates
     data[["HomeTeam", "AwayTeam"]] = data[["HomeTeam", "AwayTeam"]].apply(lambda x: x.str.strip())
@@ -157,7 +163,7 @@ def main() -> None:
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayFrac'] = 0
 
     # Add last match results
-    ADD_LAST_MATCH_RESULTS = True
+    ADD_LAST_MATCH_RESULTS = False
 
     if ADD_LAST_MATCH_RESULTS:
         N = data["DateNR"].size
@@ -173,6 +179,22 @@ def main() -> None:
         data['PrevHTR'] = prev_ht_results
         data['PrevATR'] = prev_at_results
         data['PrevDR'] = prev_duel_results
+
+    ADD_ROUNDS = True
+
+    if ADD_ROUNDS:
+        count = 0
+        occured_teams = []
+        for i in range(len(data)):
+            if data.iloc[i]["HomeTeam"] in occured_teams or data.iloc[i]["AwayTeam"] in occured_teams:
+                count += 1
+                occured_teams = []
+                occured_teams.append(data.iloc[i]["HomeTeam"])
+                occured_teams.append(data.iloc[i]["AwayTeam"])
+            else:
+                occured_teams.append(data.iloc[i]["HomeTeam"])
+                occured_teams.append(data.iloc[i]["AwayTeam"])
+            data.loc[i, "round"] = int(count)
 
     # Export the data
     PRINT_DATA_INFO = True

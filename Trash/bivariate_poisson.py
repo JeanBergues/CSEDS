@@ -33,7 +33,7 @@ def pdf_bp(x, y, alpha_it, alpha_jt, beta_it, beta_jt, lambda3, delta):
         return product_component * sum_component
     
     else:
-        for k in range(min(x, y)):
+        for k in range(min(x, y) + 1):
             sum_component += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (((lambda3)/(lambda1*lambda2))**k)
             # print(lambda1*lambda2)
             # print(((lambda3)/(lambda1*lambda2))**k)
@@ -51,7 +51,7 @@ def S(x, y, lambda1, lambda2, q, lambda3):
         return summation
 
     else:
-        for k in range(min(x,y)):
+        for k in range(min(x,y) + 1):
             summation += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (k**q) * (((lambda3)/(lambda1*lambda2))**k)
         return summation
 
