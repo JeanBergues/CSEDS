@@ -536,7 +536,7 @@ def one_season_ahead_forecast(data, schedule):
         elif proba_away > proba_home and proba_away > proba_draw:
             proba_df.loc[i ,"Prediction"] = "Away"
 
-    proba_df.to_csv("BP_One_season_ahead_forecasts_NEW.csv", index=False)
+    proba_df.to_csv("BP_ONE_SEASON_FIX_NEW.csv", index=False)
     return 
 
 def attack_defense_NN(data, schedule, params):
