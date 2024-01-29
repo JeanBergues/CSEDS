@@ -92,8 +92,8 @@ def main() -> None:
     data['AwayTeamID'] = data['AwayTeam'].apply(lambda x: team_mapping.get_loc(x))
 
     # Include the round
+    r = -1
     for t in range(25):
-        r = -1
         last_seen_week = 60
         season_data = data[data['Season'] == t]
 
