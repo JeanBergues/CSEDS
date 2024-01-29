@@ -205,8 +205,8 @@ def ll_biv_poisson(params, data, schedule):
         # Updating ll
         ll += sum_1
 
-    print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
-    print(ll)
+    # print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
+    # print(ll)
     return -ll
 
 def initial_training_model_bp(data, schedule, name_output):
@@ -437,7 +437,7 @@ def calc_probas(home_index, away_index, nr_teams, params, f):
 
 def one_season_ahead_forecast(data, schedule):
     # Get first estimates
-    first_results = pd.read_csv("BP_final_result_first_training.csv")
+    first_results = pd.read_csv("BP_result_TEST.csv")
     est_a1 = first_results["a1"][0]
     est_a2 = first_results["a2"][0]
     est_b1 = first_results["b1"][0]
@@ -521,7 +521,7 @@ def one_season_ahead_forecast(data, schedule):
         print("done")
     
     proba_df = proba_df.dropna()
-    proba_df.to_csv("BP_One_season_ahead_forecasts_2.csv", index=False)
+    proba_df.to_csv("BP_One_season_ahead_TEST.csv", index=False)
     return 
 
 def attack_defense_NN(data, schedule, params):
@@ -561,10 +561,10 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 # initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
 
 # Training model on first training set
-initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_result_TEST.csv")
+# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_result_TEST.csv")
 
 # One_season_ahead forecasts
-# one_season_ahead_forecast(data, schedule)
+one_season_ahead_forecast(data, schedule)
 
 # For NN
 # est = pd.read_csv("BP_results_for_NN_Latest.csv")

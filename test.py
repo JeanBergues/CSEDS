@@ -1,7 +1,7 @@
 import numpy as np 
 import pandas as pd
 
-df = pd.read_csv("BP_One_season_ahead_forecasts.csv")
+df = pd.read_csv("BP_One_season_ahead_TEST.csv")
 df = df.reset_index()
 count = 0
 for i in range(len(df)):
@@ -26,4 +26,4 @@ for i in range(len(df)):
     if match_result == forecast:
         count+=1
 print("Amount of times correct:", count)
-print("Percentage correct:", (count/len(df))*100)
+print("Percentage correct:", (count/len(df)))
