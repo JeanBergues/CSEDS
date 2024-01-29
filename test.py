@@ -1,25 +1,29 @@
-import bisect
+import numpy as np 
+import pandas as pd
 
-# Existing data
-teams = ['Team A', 'Team C', 'Team D']
-f = [10, 15, 12, 8, 9, 11]  # Example values for attack and defense strengths
+df = pd.read_csv("BP_One_season_ahead_TEST.csv")
+df = df.reset_index()
+count = 0
+for i in range(len(df)):
+    proba_home = df.loc[i, "Proba_Home_win"]
+    proba_draw = df.loc[i, "Proba_Draw"]
+    proba_away = df.loc[i, "Proba_Away_win"]
 
-# New team's information
-new_team_name = 'Team B'
-new_team_attack = 13
-new_team_defense = 10
-
-# Calculate the insertion index for the new team's attack and defense values
-insertion_index_attack = bisect.bisect(teams, new_team_name)  # Insert in sorted order
-insertion_index_defense = insertion_index_attack + len(teams)+1
-
-# Insert the new team's attack and defense values into f
-f.insert(insertion_index_attack, new_team_attack)
-f.insert(insertion_index_defense, new_team_defense)
-
-# Append the new team's name to the teams list
-teams.insert(insertion_index_attack, new_team_name)
-
-# Verify the updated lists
-print("Updated teams list:", teams)
-print("Updated f list:", f)
+    if df.loc[i, "FTHG"] > df.loc[i, "FTHG"]:
+        match_result = "Home"
+    elif df.loc[i, "FTHG"] < df.loc[i, "FTHG"]:
+        match_result = "Away"
+    elif df.loc[i, "FTHG"] == df.loc[i, "FTHG"]:
+        match_result ="Draw"
+    
+    if proba_home > proba_draw and proba_home > proba_away:
+        forecast = "Home"
+    elif proba_draw > proba_home and proba_draw > proba_away:
+        forecast = "Draw"
+    elif proba_away > proba_home and proba_away > proba_draw:
+        forecast = "Away"
+    
+    if match_result == forecast:
+        count+=1
+print("Amount of times correct:", count)
+print("Percentage correct:", (count/len(df)))

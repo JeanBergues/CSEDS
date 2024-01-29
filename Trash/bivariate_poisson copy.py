@@ -124,7 +124,7 @@ def ll_biv_poisson(params, data, schedule):
                 away_index = all_teams.index(away)
 
                 # Update log likelihood
-                sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
+                sum_1 += np.log(pdf_bp(data[home][t], data[away][t], f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))
                 
                 # Get corresponding data
                 x = data.iloc[t][home]
@@ -189,7 +189,7 @@ def ll_biv_poisson(params, data, schedule):
                 f[t+1][home_index + nr_teams] = w[home_index + nr_teams] + b2 * f[t][home_index + nr_teams] + a2 * s[2] # Defense strength home
                 f[t+1][away_index + nr_teams] = w[away_index + nr_teams] + b2 * f[t][away_index + nr_teams] + a2 * s[3] # Defense strength away
                 # Updating sum
-                sum_1 = np.logaddexp(sum_1, np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))) 
+                sum_1 += np.log(pdf_bp(x, y, f[t][home_index], f[t][away_index], f[t][home_index + nr_teams], f[t][away_index + nr_teams], delta, lambda3))
                 # print(sum_1)
                 
             # Filling in f_t when team does not play
@@ -219,7 +219,7 @@ def initial_training_model_bp(data, schedule, name_output):
     # delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
     # f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
-    df_ini = pd.read_csv("BP_results_second_fixed.csv")
+    df_ini = pd.read_csv("BP_final_result_first_training.csv")
     a1_ini = df_ini["a1"][0]
     a2_ini = df_ini["a2"][0]
     b1_ini = df_ini["b1"][0]
@@ -236,12 +236,12 @@ def initial_training_model_bp(data, schedule, name_output):
     initial_values.append(lambda3_ini)
     initial_values.append(delta_ini)
 
-    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+    bounds = [(-1,1), (-1,1), (-1,1), (-1,1), (0,10), (-1,1)]
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
-        bounds.append((-2,2))
+        bounds.append((-1,1))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 30000})
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3, options={'maxiter' : 30000})
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
@@ -437,7 +437,7 @@ def calc_probas(home_index, away_index, nr_teams, params, f):
 
 def one_season_ahead_forecast(data, schedule):
     # Get first estimates
-    first_results = pd.read_csv("BP_final_result_first_training.csv")
+    first_results = pd.read_csv("BP_result_TEST.csv")
     est_a1 = first_results["a1"][0]
     est_a2 = first_results["a2"][0]
     est_b1 = first_results["b1"][0]
@@ -521,7 +521,7 @@ def one_season_ahead_forecast(data, schedule):
         print("done")
     
     proba_df = proba_df.dropna()
-    proba_df.to_csv("BP_One_season_ahead_forecasts_2.csv", index=False)
+    proba_df.to_csv("BP_One_season_ahead_TEST.csv", index=False)
     return 
 
 def attack_defense_NN(data, schedule, params):
@@ -561,23 +561,23 @@ data = pd.read_csv("BP_data_NEW/panel_data.csv")
 # initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
 
 # Training model on first training set
-# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_test.csv")
+# initial_training_model_bp(data.head(752), schedule[schedule["round"] < 752], "BP_result_TEST.csv")
 
 # One_season_ahead forecasts
-# one_season_ahead_forecast(data, schedule)
+one_season_ahead_forecast(data, schedule)
 
 # For NN
-est = pd.read_csv("BP_results_for_NN_Latest.csv")
-a1 = est["a1"][0]
-a2 = est["a2"][0]
-b1 = est["b1"][0]
-b2 = est["b2"][0]
-lambda3 = est["lambda3"][0]
-delta = est["delta"][0]
-f = literal_eval(est["f"][0])
+# est = pd.read_csv("BP_results_for_NN_Latest.csv")
+# a1 = est["a1"][0]
+# a2 = est["a2"][0]
+# b1 = est["b1"][0]
+# b2 = est["b2"][0]
+# lambda3 = est["lambda3"][0]
+# delta = est["delta"][0]
+# f = literal_eval(est["f"][0])
 
-params = [a1, a2, b1, b2, lambda3, delta]
-for i in range(len(f)):
-    params.append(f[i])
+# params = [a1, a2, b1, b2, lambda3, delta]
+# for i in range(len(f)):
+#     params.append(f[i])
 
-attack_defense_NN(data, schedule, params)
+# attack_defense_NN(data, schedule, params)
