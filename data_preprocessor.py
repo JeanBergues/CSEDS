@@ -100,41 +100,61 @@ def main() -> None:
         for _, row in previous_season_data.iterrows():
             # Add teams into dict if not present yet
             if row.HomeTeamID not in season_points:
-                season_points[row.HomeTeamID] = 0
+                season_points[row.HomeTeamID] = [0, 0, 0]
             if row.AwayTeamID not in season_points:
-                season_points[row.AwayTeamID] = 0
+                season_points[row.AwayTeamID] = [0, 0, 0]
             
             # Calculate the points gained
             if row.FTR == 'H':
-                season_points[row.HomeTeamID] += 3
+                season_points[row.HomeTeamID][0] += 3
+                season_points[row.HomeTeamID][1] += 3
             elif row.FTR == 'A':
-                season_points[row.AwayTeamID] += 3
+                season_points[row.AwayTeamID][0] += 3
+                season_points[row.AwayTeamID][2] += 3
             else:
-                season_points[row.HomeTeamID] += 1
-                season_points[row.AwayTeamID] += 1
+                season_points[row.HomeTeamID][0] += 1
+                season_points[row.HomeTeamID][1] += 1
+                season_points[row.AwayTeamID][0] += 1
+                season_points[row.AwayTeamID][2] += 1
 
-        ordered_season_points = dict(sorted(season_points.items(), key=lambda item: item[1], reverse=True))
+        ordered_season_points = dict(sorted(season_points.items(), key=lambda item: item[1][0], reverse=True))
 
         for _, row in season_data.iterrows():
             try:
                 hPos = list(ordered_season_points.keys()).index(row.HomeTeamID)
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPos'] = hPos
                 hPoints = ordered_season_points[row.HomeTeamID]
-                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPoints'] = hPoints
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPoints'] = hPoints[0]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonHomePoints'] = hPoints[1]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonAwayPoints'] = hPoints[2]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonHomeFrac'] = hPoints[1]/hPoints[0]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonAwayFrac'] = hPoints[2]/hPoints[0]
             
             except (ValueError, KeyError):
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPos'] = 18
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonPoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonHomePoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonAwayPoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonHomeFrac'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'HomePrevSeasonAwayFrac'] = 0
 
             try:
                 aPos = list(ordered_season_points.keys()).index(row.AwayTeamID)
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPos'] = aPos
                 aPoints = ordered_season_points[row.AwayTeamID]
-                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = aPoints
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = aPoints[0]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonHomePoints'] = aPoints[1]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayPoints'] = aPoints[2]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonHomeFrac'] = aPoints[1]/aPoints[0]
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayFrac'] = aPoints[2]/aPoints[0]
             
             except (ValueError, KeyError):
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPos'] = 18
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonPoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonHomePoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayPoints'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonHomeFrac'] = 0
+                data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayFrac'] = 0
 
     # Add last match results
     ADD_LAST_MATCH_RESULTS = True

@@ -149,7 +149,7 @@ def main() -> None:
         class_nn = gmodel.best_estimator_
         chosen_layers = gmodel.best_params_['hidden_layer_sizes']
     else:
-        chosen_layers = (2, 8)
+        chosen_layers = (50, 40)
         class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', chosen_layers)
     
     print(f"Best layer structure: {chosen_layers}")
