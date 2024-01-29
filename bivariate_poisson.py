@@ -437,7 +437,7 @@ def calc_probas(home_index, away_index, nr_teams, params, f):
 
 def one_season_ahead_forecast(data, schedule):
     # Get first estimates
-    first_results = pd.read_csv("BP_final_result_first_training.csv")
+    first_results = pd.read_csv("BP_training_result_FIX.csv")
     est_a1 = first_results["a1"][0]
     est_a2 = first_results["a2"][0]
     est_b1 = first_results["b1"][0]
@@ -565,7 +565,7 @@ def attack_defense_NN(data, schedule, params):
         schedule.loc[i, "AwayAttack"] = f[round][away_index]
         schedule.loc[i, "AwayDefense"] = f[round][away_index + len(teams)]
     
-    schedule.to_csv("schedule_for_NN.csv", index=False)
+    schedule.to_csv("schedule_for_NN_FIX.csv", index=False)
 
 # Read Data
 schedule = pd.read_csv("processed_data.csv")
@@ -573,26 +573,26 @@ data = pd.read_csv("panel_data_FIX.csv")
 
 # Train model
 # Training model on whole data set for ANN
-# initial_training_model_bp(data, schedule, "BP_results_for_NN.csv")
+# initial_training_model_bp(data, schedule, "BP_for_NN_FIX.csv")
 
 # Training model on first training set
-initial_training_model_bp(data.head(662), schedule[schedule["RoundNO"] < 662], "BP_training_result_FIX.csv")
+# initial_training_model_bp(data.head(662), schedule[schedule["RoundNO"] < 662], "BP_training_result_FIX.csv")
 
 # One_season_ahead forecasts
-# one_season_ahead_forecast(data, schedule)
+one_season_ahead_forecast(data, schedule)
 
 # For NN
-# est = pd.read_csv("BP_results_for_NN_Latest.csv")
-# a1 = est["a1"][0]
-# a2 = est["a2"][0]
-# b1 = est["b1"][0]
-# b2 = est["b2"][0]
-# lambda3 = est["lambda3"][0]
-# delta = est["delta"][0]
-# f = literal_eval(est["f"][0])
+est = pd.read_csv("BP_for_NN_FIX.csv")
+a1 = est["a1"][0]
+a2 = est["a2"][0]
+b1 = est["b1"][0]
+b2 = est["b2"][0]
+lambda3 = est["lambda3"][0]
+delta = est["delta"][0]
+f = literal_eval(est["f"][0])
 
-# params = [a1, a2, b1, b2, lambda3, delta]
-# for i in range(len(f)):
-#     params.append(f[i])
+params = [a1, a2, b1, b2, lambda3, delta]
+for i in range(len(f)):
+    params.append(f[i])
 
-# attack_defense_NN(data, schedule, params)
+attack_defense_NN(data, schedule, params)
