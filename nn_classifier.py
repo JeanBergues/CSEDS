@@ -74,10 +74,9 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
-    INCLUDE_ATTACK_DEFENSE = False
-    data = pd.read_csv('schedule_for_NN.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
+    INCLUDE_ATTACK_DEFENSE = True
+    data = pd.read_csv('schedule_for_NN_FIX.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
-    print(data.columns)
 
     # Remap FTR
     ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
@@ -88,24 +87,33 @@ def main() -> None:
     # data['HomeTeamID'] = data['HomeTeamID'].apply(lambda x: x/max_team)
     # data['AwayTeamID'] = data['AwayTeamID'].apply(lambda x: x/max_team)
 
-    data = pd.get_dummies(data=data, columns=['HomeTeamID', 'AwayTeamID'])
-    # print(o_data)
+    max_points = max(data['HomePrevSeasonPoints'].max(), data['AwayPrevSeasonPoints'].max())
+    data['HomePrevSeasonPoints'] = data['HomePrevSeasonPoints'].apply(lambda x: x/max_points)
+    data['AwayPrevSeasonPoints'] = data['AwayPrevSeasonPoints'].apply(lambda x: x/max_points)
 
     # Rescale season results
     data['HomePrevSeasonPos'] = data['HomePrevSeasonPos'].apply(lambda x: x/18)
     data['AwayPrevSeasonPos'] = data['AwayPrevSeasonPos'].apply(lambda x: x/18)
 
-    max_points = max(data['HomePrevSeasonPoints'].max(), data['AwayPrevSeasonPoints'].max())
-    data['HomePrevSeasonPoints'] = data['HomePrevSeasonPoints'].apply(lambda x: x/max_points)
-    data['AwayPrevSeasonPoints'] = data['AwayPrevSeasonPoints'].apply(lambda x: x/max_points)
+    # Apply column selection
+    experiment = 3
+    experiments = [
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'AwayPrevSeasonPos'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PrevHTR', 'PrevATR', 'PrevDR'],
+    ]
 
-    # NN parameters
-    columns_to_not_use = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'DateNR', 'Season', 'ScoreDiff', 'PrevHTR','PrevATR','PrevDR']
-    # columns_to_use = ['FTR', 'PrevHTR','PrevATR','PrevDR']
+    columns_to_use = experiments[experiment]
+    exclude_info = ['Season', 'HomeTeamID','AwayTeamID']
+    data = data[columns_to_use]
+    # data = pd.get_dummies(data=data, columns=['HomeTeamID', 'AwayTeamID'])
+    # print(o_data)
 
-    # Recreate data samples from Koopman
-    training_data = data[(data.Season >= 1) & (data.Season < 20)]
-    oos_data = data[data.Season >= 20]
+    # Split data
+    training_data = data[(data.Season >= 1) & (data.Season < 20)].drop(exclude_info, axis=1)
+    oos_data = data[data.Season >= 20].drop(exclude_info, axis=1)
 
     # oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
     # oos_data = data[data['DateNR'] < oss_data_cutoff]
@@ -114,17 +122,14 @@ def main() -> None:
     # max_time = data['DateNR'].max()
     # data['DateNR'] = data['DateNR'].apply(lambda x: x/max_time)
     # print(data)
-
-
-    print(training_data.drop(columns_to_not_use, axis=1))
     
     # Train the neural network
     realization = training_data['FTR']
     APPLY_GRID_SEARCH = False
     if APPLY_GRID_SEARCH:
-        max_neurons = 8
-        options = [x for x in itertools.product(range(1, max_neurons+1), repeat=2)]
-        options.extend([x for x in range(1, max_neurons+1)])
+        option_neurons = [2, 5, 10, 20]
+        options = [x for x in itertools.product(option_neurons, repeat=2)]
+        options.extend([x for x in option_neurons])
         best_option = [1, 1]
         best_criterion = np.inf
 
@@ -143,14 +148,14 @@ def main() -> None:
         #     print(f"Best option: {best_option}")
         #     print(f"With MSE: {best_criterion}")
 
-        gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [500]}, n_jobs=-1, refit=True, verbose=3)
-        gmodel = gsearch_model.fit(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1), training_data['FTR'])
+        gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [300]}, n_jobs=-1, refit=True, verbose=3)
+        gmodel = gsearch_model.fit(training_data.drop('FTR', axis=1), training_data['FTR'])
 
         class_nn = gmodel.best_estimator_
         chosen_layers = gmodel.best_params_['hidden_layer_sizes']
     else:
-        chosen_layers = (50, 40)
-        class_nn = train_neural_network_classifier(training_data.drop(columns_to_not_use, axis=1), 'FTR', chosen_layers)
+        chosen_layers = (50, 20)
+        class_nn = train_neural_network_classifier(training_data, 'FTR', chosen_layers)
     
     print(f"Best layer structure: {chosen_layers}")
 
@@ -158,7 +163,7 @@ def main() -> None:
 
     # In-sample performance
     print(f"IN SAMPLE PERFORMANCE")
-    prediction = class_nn.predict(training_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    prediction = class_nn.predict(training_data.drop('FTR', axis=1))
     realization = training_data['FTR']
 
     # Analyze the results
@@ -174,7 +179,7 @@ def main() -> None:
 
     # Predict the oos
     print(f"OUT OF SAMPLE PERFORMANCE")
-    prediction = class_nn.predict(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    prediction = class_nn.predict(oos_data.drop('FTR', axis=1))
     realization = oos_data['FTR']
 
     # Analyze the results
@@ -196,7 +201,7 @@ def main() -> None:
         with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
             np.array(prediction).dump(file)
 
-    proba_predictions = class_nn.predict_proba(oos_data.drop(columns_to_not_use, axis=1).drop('FTR', axis=1))
+    proba_predictions = class_nn.predict_proba(oos_data.drop('FTR', axis=1))
 
     results = pd.DataFrame()
     results['Outcome'] = realization

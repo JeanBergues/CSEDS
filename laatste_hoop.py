@@ -74,7 +74,6 @@ def calculate_ll(params, init_f, data):
             w_ij = np.array([w[i] for i in indices])
             l1 = np.exp(d + f_ij[0] - f_ij[3])
             l2 = np.exp(f_ij[1] - f_ij[2])
-            print(l1, l2)
             x, y = int(match[0]), int(match[1])
 
             round_ll += calc_Pbp(x, y, l1, l2, l3)
@@ -87,9 +86,8 @@ def calculate_ll(params, init_f, data):
             f[n] = w[n] + b1 * f[n]
             f[n+N] = w[n+N] + b2 * f[n+N]
 
-        likelihood += np.log(round_ll)
-    print(likelihood)
-    return -1 * likelihood
+        likelihood += round_ll
+    return -1 * np.log(likelihood)
 
 def main():
     # FTHG  FTAG    FTR Season  HomeTeamID  AwayTeamID  RoundNO
@@ -97,15 +95,16 @@ def main():
     data = pd.read_csv("processed_data.csv", usecols=["Season", "RoundNO", "HomeTeamID", "AwayTeamID", "FTR", "FTHG", "FTAG"])
     init_data = data[data.Season == 0].to_numpy(dtype=np.int16)
     
-    split_season = 5
+    split_season = 2
     usable_data = data[data.Season > 0]
     train_data = usable_data[usable_data.Season <= split_season].to_numpy(dtype=np.int16)
     test_data = usable_data[usable_data.Season > split_season].to_numpy(dtype=np.int16)
 
     N = max(np.max(data.HomeTeamID), np.max(data.AwayTeamID)) + 1
-    f_init = np.repeat(2, 2*N)
-    x0 = (0.5, 0.5, 0.5, 0.5, 0.5, 2)
-    params = minimize(calculate_ll, x0, args=(f_init, train_data))
+    f_init = np.repeat(0.5, 2*N)
+    x0 = (0.2, 0.3, 0.4, 0.5, 0.2, 1)
+    bounds = [(-2, 2), (-2, 2), (-2, 2), (-2, 2), (0, 2), (0, 5)]
+    params = minimize(calculate_ll, x0, args=(f_init, train_data), method='Nelder-Mead', bounds=bounds, options={'maxiter': 100})
     print(params)
     # calculate_ll(params, f_init, train_data)
 
