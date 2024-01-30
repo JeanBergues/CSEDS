@@ -4,7 +4,6 @@ import pandas as pd
 df = pd.read_csv("BP_ONE_SEASON_FIX_NEW.csv")
 df = df.reset_index()
 count = 0
-df["Prediction_num"]
 for i in range(len(df)):
     proba_home = df.loc[i, "Proba_Home_win"]
     proba_draw = df.loc[i, "Proba_Draw"]
@@ -27,12 +26,12 @@ for i in range(len(df)):
     if match_result == forecast:
         count+=1
     
-    if forecast == "Home":
-        df.loc[i, "Prediction_num"] = 0
-    if forecast == "Away":
-        df.loc[i, "Prediction_num"] = 2
-    if forecast == "Draw":
-        df.loc[i, "Prediction_num"] = 1
-df.to_csv("Final_Forecasts.csv", index=False)
+    # if forecast == "Home":
+    #     df.loc[i, "Prediction_num"] = 0
+    # if forecast == "Away":
+    #     df.loc[i, "Prediction_num"] = 2
+    # if forecast == "Draw":
+    #     df.loc[i, "Prediction_num"] = 1
+# df.to_csv("Final_Forecasts.csv", index=False)
 print("Amount of times correct:", count)
 print("Percentage correct:", (count/len(df)))
