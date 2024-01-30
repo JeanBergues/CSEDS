@@ -178,7 +178,7 @@ def main() -> None:
                 data.loc[(data.DateNR == row.DateNR) & (data.HomeTeamID == row.HomeTeamID), 'AwayPrevSeasonAwayFrac'] = 0
 
     # Add last match results
-    ADD_LAST_MATCH_RESULTS = False
+    ADD_LAST_MATCH_RESULTS = True
 
     if ADD_LAST_MATCH_RESULTS:
         N = data["DateNR"].size
@@ -212,15 +212,15 @@ def main() -> None:
             data.loc[i, "round"] = int(count)
 
     # Export the data
-    PRINT_DATA_INFO = True
+    PRINT_DATA_INFO = False
 
     if PRINT_DATA_INFO:
         print(data.columns)
         print(starting_ordinal_date)
         print(team_mapping)
 
-    ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
-    data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
+    # ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
+    # data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
         
     data.to_csv('processed_data.csv')
 
