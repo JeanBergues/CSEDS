@@ -218,6 +218,9 @@ def main() -> None:
         print(data.columns)
         print(starting_ordinal_date)
         print(team_mapping)
+
+    ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
+    data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
         
     data.to_csv('processed_data.csv')
 
