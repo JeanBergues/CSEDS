@@ -206,27 +206,27 @@ def ll_biv_poisson(params, data, schedule):
         ll += sum_1
 
     # print(a1, a2, b1, b2, delta, lambda3, f[int(max(schedule['round']))-1][0], f[int(max(schedule['round']))-1][23])
-    print(ll)
+    # print(ll)
     return -ll
 
 def initial_training_model_bp(data, schedule, name_output):
     # initial values a1, a2, b1, b2, lambda3, delta, f_ini, data, schedule
-    a1_ini = 0.1
-    a2_ini = 0.1
-    b1_ini = 0.1
-    b2_ini = 0.1
-    lambda3_ini = (np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
-    delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
-    f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
+    # a1_ini = 0.1
+    # a2_ini = 0.1
+    # b1_ini = 0.1
+    # b2_ini = 0.1
+    # lambda3_ini = (np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
+    # delta_ini = np.log(np.cov(schedule['FTHG'], schedule['FTAG'])[0,0])
+    # f_ini = [0.3 for i in range(2*len(schedule["HomeTeam"].unique()))]
 
-    # df_ini = pd.read_csv("BP_results_second_fixed.csv")
-    # a1_ini = df_ini["a1"][0]
-    # a2_ini = df_ini["a2"][0]
-    # b1_ini = df_ini["b1"][0]
-    # b2_ini = df_ini["b2"][0]
-    # lambda3_ini = df_ini["lambda3"][0]
-    # delta_ini = df_ini["delta"][0]
-    # f_ini = literal_eval(df_ini["f"][0])
+    df_ini = pd.read_csv("BP_final_result_first_training.csv")
+    a1_ini = df_ini["a1"][0]
+    a2_ini = df_ini["a2"][0]
+    b1_ini = df_ini["b1"][0]
+    b2_ini = df_ini["b2"][0]
+    lambda3_ini = df_ini["lambda3"][0]
+    delta_ini = df_ini["delta"][0]
+    f_ini = literal_eval(df_ini["f"][0])
 
     initial_values = []
     initial_values.append(a1_ini)
@@ -236,12 +236,12 @@ def initial_training_model_bp(data, schedule, name_output):
     initial_values.append(lambda3_ini)
     initial_values.append(delta_ini)
 
-    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+    bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,5), (-2,2)]
     for i in range(len(f_ini)):
         initial_values.append(f_ini[i])
         bounds.append((-2,2))
 
-    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 30000})
+    result = minimize(ll_biv_poisson, initial_values, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', options={'maxiter' : 20000}, tol=1e-3)
 
     print(result)
     est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta, *est_f = result.x
@@ -402,17 +402,17 @@ def retrain_bp(data, schedule, ini):
 
 
         initial = [ini_a1, ini_a2, ini_b1, ini_b2, ini_lambda3, ini_delta]
-        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,5), (-2,2)]
         for i in range(len(f_new)):
             initial.append(f_new[i])
             bounds.append((-2,2))
         
-        result = minimize(ll_biv_poisson, initial, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
+        result = minimize(ll_biv_poisson, initial, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3, options={'maxiter' : 20000})
     else:
-        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,10), (-2,2)]
+        bounds = [(-2,2), (-2,2), (-2,2), (-2,2), (0,5), (-2,2)]
         for i in range(len(ini_f)):
             bounds.append((-2,2))
-        result = minimize(ll_biv_poisson, ini_f, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3)
+        result = minimize(ll_biv_poisson, ini_f, args=(data, schedule,), bounds=bounds, method='Nelder-Mead', tol=1e-3, options={'maxiter' : 20000})
     
     return result.x
 
@@ -451,7 +451,7 @@ def one_season_ahead_forecast(data, schedule):
         params.append(est_f[i])
 
     # Creating dataframe with results
-    proba_df = pd.DataFrame(None, index=range(10000), columns=['HomeTeam', 'AwayTeam', "FTHG", "FTAG", 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'round'])
+    proba_df = pd.DataFrame(None, index=range(10000), columns=['HomeTeam', 'AwayTeam', "FTHG", "FTAG", 'Proba_Home_win', 'Proba_Draw', 'Proba_Away_win', 'RoundNO'])
 
     count = 0
     # Get matches that need to be forecasted
@@ -486,8 +486,8 @@ def one_season_ahead_forecast(data, schedule):
             est_f.insert(insertion_index_defense, new_team_defense)
 
             params = [est_a1, est_a2, est_b1, est_b2, est_lambda3, est_delta]
-            for i in range(len(est_f)):
-                params.append(est_f[i])
+            for l in range(len(est_f)):
+                params.append(est_f[l])
 
         # Calculate f_t
         f = get_f(test_data, test_schedule, params)
@@ -504,7 +504,7 @@ def one_season_ahead_forecast(data, schedule):
             f_t = f[int(season_matches.loc[k, "RoundNO"])]
 
             proba_home_win, proba_draw, proba_away_win = calc_probas(home_index, away_index, len(teams_test), params, f_t)
-
+            # print(proba_home_win, proba_draw, proba_away_win)
             # Update dataframe
             proba_df.loc[count, "HomeTeam"] = str(home)
             proba_df.loc[count, "AwayTeam"] = str(away)
@@ -517,9 +517,10 @@ def one_season_ahead_forecast(data, schedule):
             count += 1
 
         # Retraining model
-        params = retrain_bp(data.head(i), train_schedule, params)
+        params = retrain_bp(data.head(int(max(test_schedule["RoundNO"]))+1), test_schedule, params)
+        print(params)
         print("done")
-    
+    proba_df.to_csv("BP_test_empty.csv", index=False)
     proba_df = proba_df.dropna()
     proba_df = proba_df.reset_index()
     proba_df["Prediction"] = None
@@ -530,11 +531,11 @@ def one_season_ahead_forecast(data, schedule):
         proba_away = proba_df.loc[i, "Proba_Away_win"]
         
         if proba_home > proba_draw and proba_home > proba_away:
-            proba_df.loc[i ,"Prediction"] = "Home"
+            proba_df.loc[i ,"Prediction"] = 0
         elif proba_draw > proba_home and proba_draw > proba_away:
-            proba_df.loc[i ,"Prediction"] = "Draw"
+            proba_df.loc[i ,"Prediction"] = 1
         elif proba_away > proba_home and proba_away > proba_draw:
-            proba_df.loc[i ,"Prediction"] = "Away"
+            proba_df.loc[i ,"Prediction"] = 2
 
     proba_df.to_csv("BP_ONE_SEASON_FIX_NEW.csv", index=False)
     return 
@@ -576,7 +577,7 @@ data = pd.read_csv("panel_data_FIX.csv")
 # initial_training_model_bp(data, schedule, "BP_for_NN_FIX.csv")
 
 # Training model on first training set
-initial_training_model_bp(data.head(662), schedule[schedule["RoundNO"] < 662], "BP_training_result_FIX.csv")
+# initial_training_model_bp(data.head(662), schedule[schedule["RoundNO"] < 662], "BP_training_result_FIX.csv")
 
 # One_season_ahead forecasts
 one_season_ahead_forecast(data, schedule)
