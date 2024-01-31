@@ -41,7 +41,7 @@ def calculate_RPS(realizations, probabilities):
 
 def main():
     # Forecast 1
-    results = pd.read_csv('predictions\poisson_full_16.csv')
+    results = pd.read_csv('predictions\df_nn_class_experiment6_SMALL_(10 - 20).csv')
     real = results['Outcome'].to_numpy()
     pred = results['Prediction'].to_numpy()
     prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
@@ -57,10 +57,10 @@ def main():
     print("Type-errors:")
     print(output_type_errors(real, pred))
 
-    DIEBOLD = False
+    DIEBOLD = True
     if DIEBOLD:
         # Forecast 2
-        results_2 = pd.read_csv('predictions\df_nn_class_experiment6.csv')
+        results_2 = pd.read_csv('predictions\poisson_per_season_final.csv')
         pred_2 = results_2['Prediction'].to_numpy()
 
         diebold = dm.dm_test(real, pred, pred_2)

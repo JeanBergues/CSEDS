@@ -251,7 +251,8 @@ def main():
         x0 = np.array([0, 0, 0, 0, result[0], result[1]])
         bounds = opt.Bounds(np.array([-0.5, -0.5, -2, -2, 0, 0]), np.array([0.5, 0.5, 2, 2, 1, 1]))
         gamma_init = np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17)))
-        all_data_result = opt.minimize(calculate_ll, x0, args=(gamma_init, train_data), tol=1e-6, bounds=bounds)
+        train_fully_data = usable_data.to_numpy(dtype=np.int16)
+        all_data_result = opt.minimize(calculate_ll, x0, args=(gamma_init, train_fully_data), tol=1e-6, bounds=bounds)
         print(all_data_result)
         output = pd.DataFrame()
         output["Value"] = all_data_result.x
@@ -261,17 +262,18 @@ def main():
         df = pd.read_csv("full_poisson_estimates_final.csv")
         all_data_result = np.array(df["Value"])
 
-    FORECAST_ALL_DATA = False
+    FORECAST_ALL_DATA = True
     if FORECAST_ALL_DATA:
-        output = forecast_f(all_data_result, np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17))), train_data, PLOT=True)[0]
+        train_fully_data = usable_data.to_numpy(dtype=np.int16)
+        output = forecast_f(all_data_result, np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17))), train_fully_data, PLOT=True)[0]
         df_output = pd.DataFrame(output, columns = ["Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
         df_output.to_csv("predictions/poisson_full_final.csv")
-        used_data = train_data_full[['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
+        used_data = data[data.Season > 0][['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
         df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         df_for_NN.to_csv("poisson_full_NN_final.csv")
 
-    FORECAST_PER_SEASON = True
+    FORECAST_PER_SEASON = False
     if FORECAST_PER_SEASON:
         x0 = all_data_result
         gamma_init = np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17)))
