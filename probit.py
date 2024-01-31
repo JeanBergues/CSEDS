@@ -16,25 +16,25 @@ warnings.filterwarnings("error")
 ### Mathematical functions
 def calc_Pbp(C, l6, k1, k2):
     if C == 2:
-        return sts.norm.cdf(k1 - l6) + 1e-6
+        return sts.norm.cdf(k1 - l6) + 1e-9
     if C == 1:
-        return sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6
+        return sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-9
     if C == 0:
-        return 1 - sts.norm.cdf(k2 - l6) + 1e-6
+        return 1 - sts.norm.cdf(k2 - l6) + 1e-9
 
 
 def calc_Delta_ijt(C, l6, k1, k2):
     if C == 2:
-        elem_1 = sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-6)
-        elem_2 = -1*sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-6)
+        elem_1 = sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-9)
+        elem_2 = -1*sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-9)
         return np.array([elem_1, elem_2])
     if C == 1:
-        elem_1 = (sts.norm.pdf(k1 - l6) - sts.norm.pdf(k2 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6)
-        elem_2 = (sts.norm.pdf(k2 - l6) - sts.norm.pdf(k1 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6)
+        elem_1 = (sts.norm.pdf(k1 - l6) - sts.norm.pdf(k2 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-9)
+        elem_2 = (sts.norm.pdf(k2 - l6) - sts.norm.pdf(k1 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-9)
         return np.array([elem_1, elem_2])
     if C == 0:
-        elem_1 = -1*sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-6)
-        elem_2 = sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-6)
+        elem_1 = -1*sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-9)
+        elem_2 = sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-9)
         return np.array([elem_1, elem_2])
 
 
@@ -233,7 +233,9 @@ def main():
         for s in np.unique(test_data[:,3]):
             train_data = usable_data[usable_data.Season <= s - 1].to_numpy(dtype=np.int16)
             parameters = minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-2).x
-            season_forecast, gamma_init = forecast_f(parameters, gamma_init, test_data[test_data[:,3] == s])
+            print(f"Estimation until {s} is complete.")
+            _, gamma_init_season = forecast_f(x0, gamma_init, train_data)
+            season_forecast, gamma_init = forecast_f(x0, gamma_init_season, test_data[test_data[:,3] == s])
 
             if s == split_season + 1:
                 output = season_forecast
