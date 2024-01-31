@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
+import time as tm
 import scipy.optimize as opt
 import scipy.stats as sts
 import warnings
@@ -25,6 +26,23 @@ def calc_S(q, x, y, l1, l2, l3):
         total += math.comb(x, k) * math.comb(y, k) * math.factorial(k) * (k**q) * last_term**k
 
     return total
+
+
+def calc_P(res, l1, l2, l3, max_sum=10):
+    prob_sum = 0
+    if res == 0:
+        for y in range(1, max_sum):
+            for x in range(0, y):
+                prob_sum += calc_Pbp(x, y, l1, l2, l3)
+    if res == 1:
+        for xy in range(0, max_sum):
+            prob_sum += calc_Pbp(xy, xy, l1, l2, l3)
+    if res == 2:
+        for x in range(1, max_sum):
+            for y in range(0, x):
+                prob_sum += calc_Pbp(x, y, l1, l2, l3)
+    return prob_sum
+
 
 
 def calc_Pbp(x, y, l1, l2, l3):
@@ -160,15 +178,18 @@ def forecast_f(params, init_f, data, PLOT=False):
 
             # Update values
             res = match[2]
+            probA = calc_P(0, l1, l2, l3)
+            probD = calc_P(1, l1, l2, l3)
+            probH = calc_P(2, l1, l2, l3)
             output[match_no, 0] = res
             output[match_no, 1] = f_ij[0]
             output[match_no, 2] = f_ij[1]
             output[match_no, 3] = f_ij[2]
             output[match_no, 4] = f_ij[3]
-            output[match_no, 5] = 1
-            output[match_no, 6] = 1
-            output[match_no, 7] = 1
-            output[match_no, 8] = 1
+            output[match_no, 5] = probA
+            output[match_no, 6] = probD
+            output[match_no, 7] = probH
+            output[match_no, 8] = np.argmax([probA, probD, probH])
 
             f_update = update_f_ijt(f_ij, w_ij, A, B, x, y, l1, l2, l3)
 
@@ -200,7 +221,7 @@ def main():
 
     init_data = data[data.Season == 0].to_numpy(dtype=np.int16)
     
-    split_season = 16
+    split_season = 18
     usable_data = data[data.Season > 0]
     train_data_full = usable_data[usable_data.Season <= split_season]
     train_data = train_data_full.to_numpy(dtype=np.int16)
@@ -218,10 +239,10 @@ def main():
         print(result)
         output = pd.DataFrame()
         output["Value"] = result.x
-        output.to_csv("initial_f_poisson.csv")
+        output.to_csv("initial_f_poisson_final.csv")
         result = result.x
     else:
-        df = pd.read_csv("initial_f_poisson.csv")
+        df = pd.read_csv("initial_f_poisson_final.csv")
         result = np.array(df["Value"])
 
 
@@ -234,46 +255,48 @@ def main():
         print(all_data_result)
         output = pd.DataFrame()
         output["Value"] = all_data_result.x
-        output.to_csv("full_poisson_estimates.csv")
+        output.to_csv("full_poisson_estimates_final.csv")
         all_data_result = all_data_result.x
     else:
-        df = pd.read_csv("full_poisson_estimates.csv")
+        df = pd.read_csv("full_poisson_estimates_final.csv")
         all_data_result = np.array(df["Value"])
 
-    FORECAST_ALL_DATA = True
+    FORECAST_ALL_DATA = False
     if FORECAST_ALL_DATA:
-        # all_data_result
         output = forecast_f(all_data_result, np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17))), train_data, PLOT=True)[0]
         df_output = pd.DataFrame(output, columns = ["Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/poisson_full_16.csv")
+        df_output.to_csv("predictions/poisson_full_final.csv")
         used_data = train_data_full[['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
         df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
-        df_for_NN.to_csv("poisson_full_NN.csv")
+        df_for_NN.to_csv("poisson_full_NN_final.csv")
 
-    FORECAST_PER_SEASON = False
+    FORECAST_PER_SEASON = True
     if FORECAST_PER_SEASON:
         x0 = all_data_result
-        gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 17)))
+        gamma_init = np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17)))
+        bounds = opt.Bounds(np.array([-0.5, -0.5, -2, -2, 0, 0]), np.array([0.5, 0.5, 2, 2, 1, 1]))
         
         output = np.zeros(1)
 
         for s in np.unique(test_data[:,3]):
             train_data = usable_data[usable_data.Season <= s - 1].to_numpy(dtype=np.int16)
-            parameters = opt.minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-2).x
+            start = tm.perf_counter()
+            parameters = opt.minimize(calculate_ll, x0, args=(gamma_init, train_data), tol=1e-6, bounds=bounds).x
+            stop = tm.perf_counter()
             # USE PARAMETERS
-            print(f"Estimation until {s} is complete.")
-            _, gamma_init_season = forecast_f(x0, gamma_init, train_data)
-            season_forecast, gamma_init = forecast_f(x0, gamma_init_season, test_data[test_data[:,3] == s])
+            print(f"Estimation until {s} is complete and took {stop - start} seconds.")
+            _, gamma_init_season = forecast_f(parameters, gamma_init, train_data)
+            season_forecast, gamma_init = forecast_f(parameters, gamma_init_season, test_data[test_data[:,3] == s])
 
             if s == split_season + 1:
                 output = season_forecast
             else:
                 output = np.vstack((output, season_forecast))
 
-        df_output = pd.DataFrame(output, columns = ["Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
+        df_output = pd.DataFrame(output, columns = ["Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/poisson_per_season.csv")
+        df_output.to_csv("predictions/poisson_per_season_final.csv")
 
 
 if __name__ == '__main__':

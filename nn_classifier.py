@@ -98,7 +98,7 @@ def main() -> None:
     data['AwayPrevSeasonPos'] = data['AwayPrevSeasonPos'].apply(lambda x: x/18)
 
     # Apply column selection
-    experiment = 5
+    experiment = 6
     experiments = [
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'AwayPrevSeasonPos'],
@@ -106,9 +106,10 @@ def main() -> None:
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PrevHTR', 'PrevATR', 'PrevDR'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PowerH', 'PowerA'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Ha", "Aa", "Hb", "Ab"],
     ]
 
-    data = pd.read_csv('probit_full_NN.csv')
+    data = pd.read_csv('poisson_full_NN.csv')
     data['FTR'] = data['FTR'].apply(lambda x: int(x))
     columns_to_use = experiments[experiment]
     exclude_info = ['Season', 'HomeTeamID','AwayTeamID']
@@ -119,6 +120,7 @@ def main() -> None:
     # Split data
     training_data = data[(data.Season >= 1) & (data.Season < 20)].drop(exclude_info, axis=1)
     oos_data = data[data.Season >= 20].drop(exclude_info, axis=1)
+    oos_data = training_data
 
     # oss_data_cutoff = dt.strptime('11/08/17', '%d/%m/%y').date().toordinal() - starting_ordinal_date
     # oos_data = data[data['DateNR'] < oss_data_cutoff]
@@ -159,7 +161,7 @@ def main() -> None:
         class_nn = gmodel.best_estimator_
         chosen_layers = gmodel.best_params_['hidden_layer_sizes']
     else:
-        chosen_layers = (50, 20)
+        chosen_layers = (200, 100)
         class_nn = train_neural_network_classifier(training_data, 'FTR', chosen_layers)
     
     print(f"Best layer structure: {chosen_layers}")
@@ -199,12 +201,12 @@ def main() -> None:
     print(type_errors)
 
 
-    if len(chosen_layers) == 1:
-        with open(f'predictions/nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
-            np.array(prediction).dump(file)   
-    else:
-        with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
-            np.array(prediction).dump(file)
+    # if len(chosen_layers) == 1:
+    #     with open(f'predictions/nn_class_{chosen_layers[0]}_0_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
+    #         np.array(prediction).dump(file)   
+    # else:
+    #     with open(f'predictions/nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}', 'wb') as file:
+    #         np.array(prediction).dump(file)
 
     proba_predictions = class_nn.predict_proba(oos_data.drop('FTR', axis=1))
 
@@ -215,7 +217,7 @@ def main() -> None:
     results['ProbD'] = proba_predictions[:,1]
     results['ProbH'] = proba_predictions[:,2]
 
-    results.to_csv(f'predictions/df_nn_class_{chosen_layers[0]}_{chosen_layers[1]}_{"AD" if INCLUDE_ATTACK_DEFENSE else ""}.csv')
+    results.to_csv(f'predictions/df_nn_class_experiment{experiment}.csv')
 
     # prediction = np.zeros(N)
     # for i in range(N):
