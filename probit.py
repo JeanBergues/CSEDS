@@ -176,7 +176,7 @@ def main():
 
     init_data = data[data.Season == 0].to_numpy(dtype=np.int16)
     
-    split_season = 16
+    split_season = 18
     usable_data = data[data.Season > 0]
     train_data_full = usable_data[usable_data.Season <= split_season]
     train_data = train_data_full.to_numpy(dtype=np.int16)
@@ -193,14 +193,14 @@ def main():
         print(result)
         output = pd.DataFrame()
         output["Value"] = result.x
-        output.to_csv("initial_gamma_probit_16.csv")
+        output.to_csv("initial_gamma_probit_final.csv")
         result = result.x
     else:
-        df = pd.read_csv("initial_gamma_probit.csv")
+        df = pd.read_csv("initial_gamma_probit_final.csv")
         result = np.array(df["Value"])
 
 
-    ESTIMATE_OVER_ALL_DATA = False
+    ESTIMATE_OVER_ALL_DATA = True
     if ESTIMATE_OVER_ALL_DATA:
         x0 = np.array([0.5, 0.5, result[0], result[1]])
         gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 17)))
@@ -208,23 +208,23 @@ def main():
         print(all_data_result)
         output = pd.DataFrame()
         output["Value"] = all_data_result.x
-        output.to_csv("full_probit_estimates_16.csv")
+        output.to_csv("full_probit_estimates_final.csv")
         all_data_result = all_data_result.x
     else:
-        df = pd.read_csv("full_probit_estimates.csv")
+        df = pd.read_csv("full_probit_estimates_final.csv")
         all_data_result = np.array(df["Value"])
 
-    FORECAST_ALL_DATA = False
+    FORECAST_ALL_DATA = True
     if FORECAST_ALL_DATA:
         output = forecast_f(all_data_result, np.concatenate((np.array(result[2:-1]), np.zeros(N - 17))), train_data)[0]
         df_output = pd.DataFrame(output, columns = ["Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/probit_full_16.csv")
+        df_output.to_csv("predictions/probit_full_final.csv")
         used_data = train_data_full[['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
         df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
-        df_for_NN.to_csv("probit_full_NN.csv")
+        df_for_NN.to_csv("probit_full_NN_final.csv")
 
-    FORECAST_PER_SEASON = False
+    FORECAST_PER_SEASON = True
     if FORECAST_PER_SEASON:
         x0 = all_data_result
         gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 17)))
@@ -236,8 +236,8 @@ def main():
             parameters = opt.minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-2).x
             # USE PARAMETERS
             print(f"Estimation until {s} is complete.")
-            _, gamma_init_season = forecast_f(x0, gamma_init, train_data)
-            season_forecast, gamma_init = forecast_f(x0, gamma_init_season, test_data[test_data[:,3] == s])
+            _, gamma_init_season = forecast_f(parameters, gamma_init, train_data)
+            season_forecast, gamma_init = forecast_f(parameters, gamma_init_season, test_data[test_data[:,3] == s])
 
             if s == split_season + 1:
                 output = season_forecast
@@ -246,7 +246,7 @@ def main():
 
         df_output = pd.DataFrame(output, columns = ["Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/probit_per_season.csv")
+        df_output.to_csv("predictions/probit_per_season_final.csv")
 
 
 if __name__ == '__main__':
