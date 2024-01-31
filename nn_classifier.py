@@ -75,7 +75,9 @@ def main() -> None:
     # Output from preprocessing
     starting_ordinal_date = 729978
     INCLUDE_ATTACK_DEFENSE = True
-    data = pd.read_csv('schedule_for_NN_FIX.csv' if INCLUDE_ATTACK_DEFENSE else 'processed_data.csv')
+    data = pd.read_csv('schedule_for_NN_FIX.csv')
+    data = pd.read_csv('processed_data.csv')
+    
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
 
     # Remap FTR
@@ -96,15 +98,18 @@ def main() -> None:
     data['AwayPrevSeasonPos'] = data['AwayPrevSeasonPos'].apply(lambda x: x/18)
 
     # Apply column selection
-    experiment = 3
+    experiment = 5
     experiments = [
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'AwayPrevSeasonPos'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PrevHTR', 'PrevATR', 'PrevDR'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PowerH', 'PowerA'],
     ]
 
+    data = pd.read_csv('probit_full_NN.csv')
+    data['FTR'] = data['FTR'].apply(lambda x: int(x))
     columns_to_use = experiments[experiment]
     exclude_info = ['Season', 'HomeTeamID','AwayTeamID']
     data = data[columns_to_use]
@@ -173,7 +178,7 @@ def main() -> None:
     succes_ratio = calculate_succes_ratio(np.array(realization), prediction)
     print(f"Succes ratio: {succes_ratio:.3f}%")
     MSE = np.sum(np.square(realization - prediction))
-    print(f"MSE: {MSE:d}")
+    print(f"MSE: {MSE}")
     type_errors = output_type_errors(np.array(realization), prediction)
     print(type_errors)
 

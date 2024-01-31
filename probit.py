@@ -16,25 +16,25 @@ warnings.filterwarnings("error")
 ### Mathematical functions
 def calc_Pbp(C, l6, k1, k2):
     if C == 2:
-        return sts.norm.cdf(k1 - l6)
+        return sts.norm.cdf(k1 - l6) + 1e-6
     if C == 1:
-        return sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6)
+        return sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6
     if C == 0:
-        return 1 - sts.norm.cdf(k2 - l6)
+        return 1 - sts.norm.cdf(k2 - l6) + 1e-6
 
 
 def calc_Delta_ijt(C, l6, k1, k2):
     if C == 2:
-        elem_1 = sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6))
-        elem_2 = -1*sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6))
+        elem_1 = sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-6)
+        elem_2 = -1*sts.norm.pdf(k2 - l6) / (1 - sts.norm.cdf(k2 - l6) + 1e-6)
         return np.array([elem_1, elem_2])
     if C == 1:
-        elem_1 = (sts.norm.pdf(k1 - l6) - sts.norm.pdf(k2 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6))
-        elem_2 = (sts.norm.pdf(k2 - l6) - sts.norm.pdf(k1 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6))
+        elem_1 = (sts.norm.pdf(k1 - l6) - sts.norm.pdf(k2 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6)
+        elem_2 = (sts.norm.pdf(k2 - l6) - sts.norm.pdf(k1 - l6)) / (sts.norm.cdf(k2 - l6) - sts.norm.cdf(k1 - l6) + 1e-6)
         return np.array([elem_1, elem_2])
     if C == 0:
-        elem_1 = -1*sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6))
-        elem_2 = sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6))
+        elem_1 = -1*sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-6)
+        elem_2 = sts.norm.pdf(k1 - l6) / (1 - sts.norm.cdf(k1 - l6) + 1e-6)
         return np.array([elem_1, elem_2])
 
 
@@ -125,16 +125,17 @@ def calculate_static_ll(params, data):
 
 
 def forecast_f(params, init_f, data):
-    a1, a2, b1, b2, l3, d = params
+    a1, b1, k1, k2star = params
+    k2 = k1 + np.exp(k2star)
     f = np.copy(init_f)
-    N = len(f) // 2
-    w = np.multiply(f, np.concatenate((np.repeat(1-b1, N), np.repeat(1-b2, N))))
-    A = np.diag([a1, a1, a2, a2])
-    B = np.diag([b1, b1, b2, b2])
+    N = len(f)
+    w = np.multiply(f, np.repeat(1-b1, N))
+    output = np.zeros((len(data[:,0]), 7))
+    match_no = 0
+    A = np.diag([a1, a1])
+    B = np.diag([b1, b1])
 
     rounds = np.unique(data[:,6])
-    ajax = np.zeros(len(rounds))
-    fey = np.zeros(len(rounds))
     for r in rounds:
         teams_played = np.repeat(False, N)
         r_data = data[data[:, 6] == r]
@@ -144,30 +145,30 @@ def forecast_f(params, init_f, data):
             teams_played[i] = True
             teams_played[j] = True
 
-            indices = [i, j, i+N, j+N]
+            indices = [i, j]
             f_ij = np.array([f[i] for i in indices])
             w_ij = np.array([w[i] for i in indices])
-            l1 = np.exp(d + f_ij[0] - f_ij[3])
-            l2 = np.exp(f_ij[1] - f_ij[2])
-            x, y = int(match[0]), int(match[1])
+            
+            C = match[2]
+            l6 = f_ij[0] - f_ij[1]
 
-            f_update = update_f_ijt(f_ij, w_ij, A, B, x, y, l1, l2, l3)
+            # Update values
+            output[match_no, 0] = C
+            output[match_no, 1] = f_ij[0]
+            output[match_no, 2] = f_ij[1]
+            output[match_no, 3] = calc_Pbp(0, l6, k1, k2)
+            output[match_no, 4] = calc_Pbp(1, l6, k1, k2)
+            output[match_no, 5] = calc_Pbp(2, l6, k1, k2)
+            output[match_no, 6] = np.argmax([calc_Pbp(x, l6, k1, k2) for x in [0, 1, 2]])
+
+            f_update = update_f_ijt(f_ij, w_ij, A, B, C, l6, k1, k2)
 
             for x, index in enumerate(indices):
                 f[index] = f_update[x]
 
-        for n in np.where(teams_played == False):
-            f[n] = w[n] + b1 * f[n]
-            f[n+N] = w[n+N] + b2 * f[n+N]
-
-        # print(f"Ajax: {f[6]}, Feyenoord: {f[14]}")
-        ajax[r - rounds[0]] = f[6]
-        fey[r - rounds[0]] = f[14]
-
-    sns.lineplot(y=ajax, x=rounds, color='red')
-    sns.lineplot(y=fey, x=rounds)
-    plt.show()
-    return f
+            match_no += 1
+            
+    return (output, f)
 
 def main():
     # FTHG  FTAG    FTR Season  HomeTeamID  AwayTeamID  RoundNO
@@ -175,13 +176,14 @@ def main():
     data = pd.read_csv("processed_data.csv", usecols=["Season", "RoundNO", "HomeTeamID", "AwayTeamID", "FTR", "FTHG", "FTAG"])
     ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
     data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
-    N = np.max(data['HomeTeamID'])
+    N = np.max(data['HomeTeamID']) + 1
 
     init_data = data[data.Season == 0].to_numpy(dtype=np.int16)
     
-    split_season = 2
+    split_season = 18
     usable_data = data[data.Season > 0]
-    train_data = usable_data[usable_data.Season <= split_season].to_numpy(dtype=np.int16)
+    train_data_full = usable_data[usable_data.Season <= split_season]
+    train_data = train_data_full.to_numpy(dtype=np.int16)
     test_data = usable_data[usable_data.Season > split_season].to_numpy(dtype=np.int16)
 
     ESTIMATE_INITIAL_GAMMA = False
@@ -189,7 +191,7 @@ def main():
         k_start = np.array([1, 1])
         gamma_start = np.repeat(0.5, 18)
         x0 = np.concatenate((k_start, gamma_start))
-        result = minimize(calculate_static_ll, x0, args=(init_data), method='Nelder-Mead', tol=1e-4)
+        result = minimize(calculate_static_ll, x0, args=(init_data), method='Nelder-Mead', tol=1e-2)
         print(result)
         output = pd.DataFrame()
         output["Value"] = result.x
@@ -198,32 +200,50 @@ def main():
         df = pd.read_csv("initial_gamma_probit.csv")
         result = np.array(df["Value"])
 
-    ESTIMATE_OVER_ALL_DATA = True
+    ESTIMATE_OVER_ALL_DATA = False
     if ESTIMATE_OVER_ALL_DATA:
         x0 = np.array([0.5, 0.5, result[0], result[1]])
-        gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 18)))
-        all_data_result = minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-4)
+        gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 17)))
+        all_data_result = minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-2)
         print(all_data_result)
         output = pd.DataFrame()
         output["Value"] = all_data_result.x
         output.to_csv("full_probit_estimates.csv")
+    else:
+        df = pd.read_csv("full_probit_estimates.csv")
+        all_data_result = np.array(df["Value"])
 
-    
-    # params = minimize(calculate_ll, x0, args=(f_init, train_data), method='Nelder-Mead', bounds=bounds, options={'maxiter': 300})
-    # print(params)
-    # calculate_ll(params, f_init, train_data)
+    FORECAST_ALL_DATA = False
+    if FORECAST_ALL_DATA:
+        output = forecast_f(all_data_result, np.concatenate((np.array(result[2:-1]), np.zeros(N - 17))), train_data)[0]
+        df_output = pd.DataFrame(output, columns = ["Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
+        print(output)
+        df_output.to_csv("predictions/probit_full.csv")
+        used_data = train_data_full[['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
+        df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
+        df_for_NN.to_csv("probit_full_NN.csv")
 
+    FORECAST_PER_SEASON = True
+    if FORECAST_PER_SEASON:
+        x0 = all_data_result
+        gamma_init = np.concatenate((np.array(result[2:-1]), np.zeros(N - 17)))
+        
+        output = np.zeros(1)
+
+        for s in np.unique(test_data[:,3]):
+            train_data = usable_data[usable_data.Season <= s - 1].to_numpy(dtype=np.int16)
+            parameters = minimize(calculate_ll, x0, args=(gamma_init, train_data), method='Nelder-Mead', tol=1e-2).x
+            season_forecast, gamma_init = forecast_f(parameters, gamma_init, test_data[test_data[:,3] == s])
+
+            if s == split_season + 1:
+                output = season_forecast
+            else:
+                output = np.vstack((output, season_forecast))
+
+        df_output = pd.DataFrame(output, columns = ["Outcome", "PowerH", "PowerA", "ProbA", "ProbD", "ProbH", "Prediction"])
+        print(output)
+        df_output.to_csv("predictions/probit_per_season.csv")
 
 
 if __name__ == '__main__':
     main()
-
-
-    # X = np.diagflat(np.concatenate((np.ones(4), np.repeat(2, 4))))
-    # M = np.zeros((4, 8))
-    # M[0, 1] = 1
-    # M[1, 6] = 1
-    # M[2, 7] = 1
-    # M[3, 4] = 1
-    # print(np.matmul(np.matmul(M, X), M.T))
-# f_ij = np.array([f[i] for i in indexes_needed])
