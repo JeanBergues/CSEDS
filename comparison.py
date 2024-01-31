@@ -41,17 +41,28 @@ def calculate_RPS(realizations, probabilities):
 
 def main():
     # Forecast 1
-    results = pd.read_csv('predictions/probit_full.csv')
+    results = pd.read_csv('predictions\df_nn_class_100_50_.csv')
     real = results['Outcome'].to_numpy()
     pred = results['Prediction'].to_numpy()
     prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
 
-    print(output_type_errors(real, pred))
-    print(calculate_succes_ratio(real, pred))
-    
-    rps = calculate_RPS(real, prob)
-    print(np.mean(rps))
+    # Forecast 2
+    results_2 = pd.read_csv('predictions\df_nn_class_100_20_.csv')
+    pred_2 = results_2['Prediction'].to_numpy()
 
+    rps = calculate_RPS(real, prob)
+    diebold = dm.dm_test(real, pred, pred_2)
+
+    print("=== Statistics ===")
+    print("Succes ratio: ")
+    print(f"{calculate_succes_ratio(real, pred):.3f}\n")
+    print("ARPS: ")
+    print(f"{np.mean(rps):.3f}\n")
+    print("DM-test:")
+    print(f"Stat = {diebold[0]:.3f}")
+    print(f"P-val = {diebold[1]:.3f}\n")
+    print("Type-errors:")
+    print(output_type_errors(real, pred))
 
 if __name__ == '__main__':
     main()
