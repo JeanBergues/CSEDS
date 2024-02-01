@@ -202,8 +202,8 @@ def forecast_f(params, init_f, data, PLOT=False):
             if f[n][0] != 0: # Do not update teams that have not entered yet
                 f[n] = w[n] + b1 * f[n]
 
-        ajax[r - rounds[0]] = f[6]
-        fey[r - rounds[0]] = f[14]
+        ajax[r - rounds[0]] = f[16]
+        fey[r - rounds[0]] = f[19]
 
     if PLOT:
         sns.lineplot(y=ajax, x=rounds, color='red')
@@ -214,9 +214,10 @@ def forecast_f(params, init_f, data, PLOT=False):
 def main():
     # FTHG  FTAG    FTR Season  HomeTeamID  AwayTeamID  RoundNO
     # 0     1       2   3       4           5           6
-    data = pd.read_csv("processed_data.csv", usecols=["Season", "RoundNO", "HomeTeamID", "AwayTeamID", "FTR", "FTHG", "FTAG"])
+    data = pd.read_csv("en_processed_data.csv", usecols=["Season", "RoundNO", "HomeTeamID", "AwayTeamID", "FTR", "FTHG", "FTAG"])
     ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
     data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
+    data = data[data.Season <= 16]
     N = np.max(data['HomeTeamID']) + 1
 
     init_data = data[data.Season == 0].to_numpy(dtype=np.int16)
@@ -230,19 +231,19 @@ def main():
 
     ESTIMATE_INITIAL_GAMMA = False
     if ESTIMATE_INITIAL_GAMMA:
-        bounds = opt.Bounds(np.concatenate((np.array([0, 0]), -3*np.ones(36))), np.concatenate((np.array([3, 3]), 3*np.ones(36))))
-        constraint = opt.LinearConstraint(np.concatenate((np.array([0, 0]), np.ones(18), np.zeros(18))), 0, 0)
+        bounds = opt.Bounds(np.concatenate((np.array([0, 0]), -3*np.ones(40))), np.concatenate((np.array([3, 3]), 3*np.ones(40))))
+        constraint = opt.LinearConstraint(np.concatenate((np.array([0, 0]), np.ones(20), np.zeros(20))), 0, 0)
         k_start = np.array([0.2, 0.5])
-        gamma_start = np.repeat(0, 36)
+        gamma_start = np.repeat(0, 40)
         x0 = np.concatenate((k_start, gamma_start))
         result = opt.minimize(calculate_static_ll, x0, args=(init_data), tol=1e-4, constraints=constraint, bounds=bounds)
         print(result)
         output = pd.DataFrame()
         output["Value"] = result.x
-        output.to_csv("initial_f_poisson_final.csv")
+        output.to_csv("en_initial_f_poisson_final.csv")
         result = result.x
     else:
-        df = pd.read_csv("initial_f_poisson_final.csv")
+        df = pd.read_csv("en_initial_f_poisson_final.csv")
         result = np.array(df["Value"])
 
 
@@ -250,33 +251,33 @@ def main():
     if ESTIMATE_OVER_ALL_DATA:
         x0 = np.array([0, 0, 0, 0, result[0], result[1]])
         bounds = opt.Bounds(np.array([-0.5, -0.5, -2, -2, 0, 0]), np.array([0.5, 0.5, 2, 2, 1, 1]))
-        gamma_init = np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17)))
+        gamma_init = np.concatenate((np.array(result[2:22]), np.zeros(N - 19), np.array(result[22:]), np.zeros(N - 19)))
         train_fully_data = usable_data.to_numpy(dtype=np.int16)
         all_data_result = opt.minimize(calculate_ll, x0, args=(gamma_init, train_fully_data), tol=1e-6, bounds=bounds)
         print(all_data_result)
         output = pd.DataFrame()
         output["Value"] = all_data_result.x
-        output.to_csv("full_poisson_estimates_final.csv")
+        output.to_csv("en_full_poisson_estimates_final.csv")
         all_data_result = all_data_result.x
     else:
-        df = pd.read_csv("full_poisson_estimates_final.csv")
+        df = pd.read_csv("en_full_poisson_estimates_final.csv")
         all_data_result = np.array(df["Value"])
 
     FORECAST_ALL_DATA = True
     if FORECAST_ALL_DATA:
         train_fully_data = usable_data.to_numpy(dtype=np.int16)
-        output = forecast_f(all_data_result, np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17))), train_fully_data, PLOT=True)[0]
+        output = forecast_f(all_data_result, np.concatenate((np.array(result[2:22]), np.zeros(N - 19), np.array(result[22:]), np.zeros(N - 19))), train_fully_data, PLOT=True)[0]
         df_output = pd.DataFrame(output, columns = ["Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/poisson_full_final.csv")
+        df_output.to_csv("predictions/en_poisson_full_final.csv")
         used_data = data[data.Season > 0][['FTR', 'Season', 'HomeTeamID', 'AwayTeamID']].to_numpy()
         df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
-        df_for_NN.to_csv("poisson_full_NN_final.csv")
+        df_for_NN.to_csv("en_poisson_full_NN_final.csv")
 
     FORECAST_PER_SEASON = False
     if FORECAST_PER_SEASON:
         x0 = all_data_result
-        gamma_init = np.concatenate((np.array(result[2:21]), np.zeros(N - 17), np.array(result[22:-1]), np.zeros(N - 17)))
+        gamma_init = np.concatenate((np.array(result[2:22]), np.zeros(N - 19), np.array(result[22:]), np.zeros(N - 19)))
         bounds = opt.Bounds(np.array([-0.5, -0.5, -2, -2, 0, 0]), np.array([0.5, 0.5, 2, 2, 1, 1]))
         
         output = np.zeros(1)
@@ -298,7 +299,7 @@ def main():
 
         df_output = pd.DataFrame(output, columns = ["Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         print(output)
-        df_output.to_csv("predictions/poisson_per_season_final.csv")
+        df_output.to_csv("predictions/en_poisson_per_season_final.csv")
 
 
 if __name__ == '__main__':

@@ -14,11 +14,11 @@ import numpy as np
 
 def read_single_csv(file_name: str, columns: list[str]) -> pd.DataFrame:
     # print(f"Now reading file {file_name}")
-    df = pd.read_csv(file_name, sep=',', usecols=columns)
+    df = pd.read_csv(file_name, sep=',', usecols=columns, encoding='windows-1252')
     df = df.dropna(axis=0)
 
     # Already convert date to ordinal values, as after 2018 the time format changes
-    date_format = '%d/%m/%Y' if int(file_name[16:20]) >= 1819 else '%d/%m/%y'
+    date_format = '%d/%m/%Y' if int(file_name[16:20]) >= 1718 or int(file_name[16:20]) == 1516 or int(file_name[16:20]) == 203 else '%d/%m/%y'
     season = int(file_name[18:20])
     df["DateNR"] = df["Date"].apply(lambda d: datetime.strptime(d, date_format).date().toordinal())
     df["Season"] = df["Date"].apply(lambda d: season)
@@ -72,17 +72,18 @@ def find_previous_duel_result(data: pd.DataFrame, htID, atID, game_ord_date):
 
 def main() -> None:
     # Set-up variables concerning data
-    country = 'nl'
+    country = 'en'
     selected_columns = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
     
     # Read in the data
     data = read_and_filter_data(country, selected_columns)
 
     # Combine teams with name-change
-    data.loc[data["AwayTeam"] == "Roda JC","AwayTeam"] = "Roda"
-    data.loc[data["AwayTeam"] == "Sparta Rotterdam","AwayTeam"] = "Sparta"
-    data.loc[data["HomeTeam"] == "Roda JC","HomeTeam"] = "Roda"
-    data.loc[data["HomeTeam"] == "Sparta Rotterdam","HomeTeam"] = "Sparta"
+    if country == 'nl':
+        data.loc[data["AwayTeam"] == "Roda JC","AwayTeam"] = "Roda"
+        data.loc[data["AwayTeam"] == "Sparta Rotterdam","AwayTeam"] = "Sparta"
+        data.loc[data["HomeTeam"] == "Roda JC","HomeTeam"] = "Roda"
+        data.loc[data["HomeTeam"] == "Sparta Rotterdam","HomeTeam"] = "Sparta"
     
     # Strip leading and trailing whitespace out of club names to prevent duplicates
     data[["HomeTeam", "AwayTeam"]] = data[["HomeTeam", "AwayTeam"]].apply(lambda x: x.str.strip())
@@ -115,6 +116,7 @@ def main() -> None:
 
     # Add last season placement
     for t in range(1, 25):
+        print(f"Processing season {t}")
         season_points = {}
         season_data = data[data['Season'] == t]
         previous_season_data = data[data['Season'] == t-1]
@@ -233,7 +235,7 @@ def main() -> None:
             data.loc[i, "round"] = int(count)
 
     # Export the data
-    PRINT_DATA_INFO = False
+    PRINT_DATA_INFO = True
 
     if PRINT_DATA_INFO:
         print(data.columns)
@@ -243,7 +245,7 @@ def main() -> None:
     # ftr_mapping = {'A': 0, 'D': 1, 'H': 2}
     # data['FTR'] = data['FTR'].apply(lambda x: ftr_mapping[x])
         
-    data.to_csv('processed_data.csv')
+    data.to_csv('en_processed_data.csv')
 
 if __name__ == "__main__":
     main()
