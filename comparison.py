@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 import dieboldmariano as dm
 import glob
+import scipy.stats as sts
 
 def output_type_errors(realizations, forecast):
     errors = np.zeros(9, dtype=np.int16)
@@ -29,9 +30,9 @@ def calculate_RPS(realizations, probabilities):
     rps = np.zeros(len(realizations))
     for i, (o, p) in enumerate(zip(realizations, probabilities)):
         cdf = np.ones(3)
-        if int(o) != 2:
+        if int(o) != 0:
             cdf[0] = 0
-        if int(o) == 0:
+        if int(o) == 2:
             cdf[1] = 0
         
         squares = np.square([p[0] - cdf[0], p[0] + p[1] - cdf[1], 0])
@@ -41,24 +42,33 @@ def calculate_RPS(realizations, probabilities):
 
 
 def main():
-    ENGLAND = False
+    ENGLAND = True
     add_string = 'en_' if ENGLAND else ''
     files = glob.glob(f'.\\predictions\\{add_string}df_*.csv')
     results_2 = pd.read_csv(f'predictions\{add_string}poisson_per_season_final.csv')
     pred_2 = results_2['Prediction'].to_numpy()
+    prob_2 = results_2[['ProbA', 'ProbD', 'ProbH']].to_numpy()
+    N = len(results_2['Prediction'])
     
     for file in files:
         results = pd.read_csv(file)
         real = results['Outcome'].to_numpy()
         pred = results['Prediction'].to_numpy()
         prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
-        rps = calculate_RPS(real, prob)
 
-        diebold = dm.dm_test(real, pred, pred_2)
+        rps = calculate_RPS(real, prob)
+        rps_2 = calculate_RPS(real, prob_2)
+        dt = rps - rps_2
+        d = np.mean(dt)
+        se_d = np.std(dt)
+        DM_stat = d / se_d
+        pval = 1 - sts.norm.cdf(DM_stat)
+
+
         type_errors = output_type_errors(real, pred)
         
         print(file)
-        print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {diebold[0]:.3f}\tDMP: {diebold[1]:.3f}")
+        print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {DM_stat:.3f}\tDMP: {pval:.3f}")
         print("")
 
     file = f'predictions\{add_string}probit_per_season_final.csv'
@@ -67,12 +77,16 @@ def main():
     pred = results['Prediction'].to_numpy()
     prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
     rps = calculate_RPS(real, prob)
-
-    diebold = dm.dm_test(real, pred, pred_2)
+    rps_2 = calculate_RPS(real, prob_2)
+    dt = rps - rps_2
+    d = np.mean(dt)
+    se_d = np.std(dt)
+    DM_stat = d / se_d
+    pval = 1 - sts.norm.cdf(DM_stat)
     type_errors = output_type_errors(real, pred)
     
     print(file)
-    print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {diebold[0]:.3f}\tDMP: {diebold[1]:.3f}")
+    print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {DM_stat:.3f}\tDMP: {pval:.3f}")
     print("")
 
     file = f'predictions\{add_string}poisson_per_season_final.csv'
