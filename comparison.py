@@ -41,8 +41,10 @@ def calculate_RPS(realizations, probabilities):
 
 
 def main():
-    files = glob.glob(f'.\\predictions\\en_df_*.csv')
-    results_2 = pd.read_csv('predictions\en_poisson_per_season_final.csv')
+    ENGLAND = False
+    add_string = 'en_' if ENGLAND else ''
+    files = glob.glob(f'.\\predictions\\{add_string}df_*.csv')
+    results_2 = pd.read_csv(f'predictions\{add_string}poisson_per_season_final.csv')
     pred_2 = results_2['Prediction'].to_numpy()
     
     for file in files:
@@ -51,15 +53,39 @@ def main():
         pred = results['Prediction'].to_numpy()
         prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
         rps = calculate_RPS(real, prob)
-        print(len(results['Outcome']))
-        print(len(results_2['Outcome']))
 
         diebold = dm.dm_test(real, pred, pred_2)
         type_errors = output_type_errors(real, pred)
         
-        
         print(file)
         print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {diebold[0]:.3f}\tDMP: {diebold[1]:.3f}")
+        print("")
+
+    file = f'predictions\{add_string}probit_per_season_final.csv'
+    results = pd.read_csv(f'predictions\{add_string}probit_per_season_final.csv')
+    real = results['Outcome'].to_numpy()
+    pred = results['Prediction'].to_numpy()
+    prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
+    rps = calculate_RPS(real, prob)
+
+    diebold = dm.dm_test(real, pred, pred_2)
+    type_errors = output_type_errors(real, pred)
+    
+    print(file)
+    print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}\tDMS: {diebold[0]:.3f}\tDMP: {diebold[1]:.3f}")
+    print("")
+
+    file = f'predictions\{add_string}poisson_per_season_final.csv'
+    results = pd.read_csv(f'predictions\{add_string}poisson_per_season_final.csv')
+    real = results['Outcome'].to_numpy()
+    pred = results['Prediction'].to_numpy()
+    prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()
+    rps = calculate_RPS(real, prob)
+
+    type_errors = output_type_errors(real, pred)
+    
+    print(file)
+    print(f"SR: {calculate_succes_ratio(real, pred):.3f}\tARPS: {np.mean(rps):.3f}\tCH: {int(type_errors[2, 2])}\tCD: {int(type_errors[1, 1])}\tCA: {int(type_errors[0, 0])}")
 
 if __name__ == '__main__':
     main()
