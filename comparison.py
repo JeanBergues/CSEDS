@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import dieboldmariano as dm
+import glob
 
 def output_type_errors(realizations, forecast):
     errors = np.zeros(9, dtype=np.int16)
@@ -40,6 +41,10 @@ def calculate_RPS(realizations, probabilities):
 
 
 def main():
+    files = glob.glob(f'.\\predictions\\df_*.csv')
+    results_2 = pd.read_csv('predictions\poisson_per_season_final.csv')
+    pred_2 = results_2['Prediction'].to_numpy()
+    
     # Forecast 1
     results = pd.read_csv('predictions\df_nn_class_experiment5_BIG_(10 - 100).csv')
     real = results['Outcome'].to_numpy()
@@ -60,8 +65,7 @@ def main():
     DIEBOLD = True
     if DIEBOLD:
         # Forecast 2
-        results_2 = pd.read_csv('predictions\poisson_per_season_final.csv')
-        pred_2 = results_2['Prediction'].to_numpy()
+        
 
         diebold = dm.dm_test(real, pred, pred_2)
 
