@@ -41,7 +41,7 @@ def calculate_RPS(realizations, probabilities):
 
 def main():
     # Forecast 1
-    results = pd.read_csv('predictions\df_nn_class_experiment6_BIG_(200 - 100).csv')
+    results = pd.read_csv('predictions\df_nn_class_experiment5_BIG_(10 - 100).csv')
     real = results['Outcome'].to_numpy()
     pred = results['Prediction'].to_numpy()
     prob = results[['ProbA', 'ProbD', 'ProbH']].to_numpy()

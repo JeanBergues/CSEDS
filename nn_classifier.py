@@ -74,9 +74,7 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     BIG = True
-    data = pd.read_csv('schedule_for_NN_FIX.csv')
     data = pd.read_csv('processed_data.csv')
-    
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
 
     # Remap FTR
@@ -97,12 +95,12 @@ def main() -> None:
     data['AwayPrevSeasonPos'] = data['AwayPrevSeasonPos'].apply(lambda x: x/18)
 
     # Apply column selection
-    experiment = 6
+    experiment = 3
     experiments = [
-        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense'], # Dont do this one
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'AwayPrevSeasonPos'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
-        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense', 'HomePrevSeasonPos', 'HomePrevSeasonPoints', 'AwayPrevSeasonPos', 'AwayPrevSeasonPoints'],
+        ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'HomePrevSeasonHomeGoals', 'HomePrevSeasonHomeAgainst', 'HomePrevSeasonAwayGoals', 'HomePrevSeasonAwayAgainst', 'AwayPrevSeasonHomeGoals', 'AwayPrevSeasonHomeAgainst', 'AwayPrevSeasonAwayGoals', 'AwayPrevSeasonAwayAgainst'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PrevHTR', 'PrevATR', 'PrevDR'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', 'PowerH', 'PowerA'],
         ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Ha", "Aa", "Hb", "Ab"],
