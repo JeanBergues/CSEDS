@@ -229,7 +229,7 @@ def main():
     test_data = usable_data[usable_data.Season > split_season].to_numpy(dtype=np.int16)
     
 
-    ESTIMATE_INITIAL_GAMMA = True
+    ESTIMATE_INITIAL_GAMMA = False
     if ESTIMATE_INITIAL_GAMMA:
         bounds = opt.Bounds(np.concatenate((np.array([0, 0]), -3*np.ones(40))), np.concatenate((np.array([3, 3]), 3*np.ones(40))))
         constraint = opt.LinearConstraint(np.concatenate((np.array([0, 0]), np.ones(20), np.zeros(20))), 0, 0)
@@ -263,7 +263,7 @@ def main():
         df = pd.read_csv("en_full_poisson_estimates_final.csv")
         all_data_result = np.array(df["Value"])
 
-    FORECAST_ALL_DATA = False
+    FORECAST_ALL_DATA = True
     if FORECAST_ALL_DATA:
         train_fully_data = usable_data.to_numpy(dtype=np.int16)
         output = forecast_f(all_data_result, np.concatenate((np.array(result[2:22]), np.zeros(N - 19), np.array(result[22:]), np.zeros(N - 19))), train_fully_data, PLOT=True)[0]
@@ -274,7 +274,7 @@ def main():
         df_for_NN = pd.DataFrame(np.hstack((used_data, output)), columns = ['FTR', 'Season', 'HomeTeamID', 'AwayTeamID', "Outcome", "Ha", "Aa", "Hb", "Ab", "ProbA", "ProbD", "ProbH", "Prediction"])
         df_for_NN.to_csv("en_poisson_full_NN_final.csv")
 
-    FORECAST_PER_SEASON = True
+    FORECAST_PER_SEASON = False
     if FORECAST_PER_SEASON:
         x0 = all_data_result
         gamma_init = np.concatenate((np.array(result[2:22]), np.zeros(N - 19), np.array(result[22:]), np.zeros(N - 19)))
