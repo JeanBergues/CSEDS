@@ -74,7 +74,7 @@ def output_type_errors(realizations, forecast):
 def main() -> None:
     # Output from preprocessing
     BIG = True
-    data = pd.read_csv('processed_data.csv')
+    data = pd.read_csv('en_processed_data.csv')
     data.drop(data.columns[data.columns.str.contains('unnamed',case = False)], axis = 1, inplace = True)
 
     # Remap FTR
@@ -107,10 +107,10 @@ def main() -> None:
     ]
 
     if experiment == 5:
-        data = pd.read_csv('probit_full_NN_final.csv')
+        data = pd.read_csv('en_probit_full_NN_final.csv')
         data['FTR'] = data['FTR'].apply(lambda x: int(x))
     if experiment == 6:
-        data = pd.read_csv('poisson_full_NN_final.csv')
+        data = pd.read_csv('en_poisson_full_NN_final.csv')
         data['FTR'] = data['FTR'].apply(lambda x: int(x))
 
     
@@ -158,7 +158,7 @@ def main() -> None:
         #     print(f"Best option: {best_option}")
         #     print(f"With MSE: {best_criterion}")
 
-        gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [300]}, n_jobs=-1, refit=True, verbose=3)
+        gsearch_model = modsel.GridSearchCV(nn.MLPClassifier(), param_grid={'hidden_layer_sizes': options, 'random_state': [1234], 'max_iter': [500]}, n_jobs=-1, refit=True, verbose=3)
         gmodel = gsearch_model.fit(training_data.drop('FTR', axis=1), training_data['FTR'])
 
         class_nn = gmodel.best_estimator_
@@ -224,9 +224,9 @@ def main() -> None:
     results['ProbD'] = proba_predictions[:,1]
     results['ProbH'] = proba_predictions[:,2]
 
-    layer_text = f"{chosen_layers[0]}" if len(chosen_layers) == 1 else f"{chosen_layers[0]} - {chosen_layers[1]}"
+    layer_text = f"{chosen_layers}" if type(chosen_layers) == int else f"{chosen_layers[0]} - {chosen_layers[1]}"
 
-    results.to_csv(f'predictions/df_nn_class_experiment{experiment}_{"BIG" if BIG else "SMALL"}_({layer_text}).csv')
+    results.to_csv(f'predictions/en_df_nn_class_experiment{experiment}_{"BIG" if BIG else "SMALL"}_({layer_text}).csv')
 
     # prediction = np.zeros(N)
     # for i in range(N):
